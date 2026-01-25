@@ -1,38 +1,62 @@
-import { useState } from "react"
-
-interface Channel {
-  id: string
-  name: string
-  code: string
-  status: "ACTIVE" | "INACTIVE"
-}
+import { useEffect, useState } from "react"
+import type { Channel } from "../types/channel"
+import { ChannelAPI } from "../lib/api"
+import CreateChannelModal from "../components/CreateChannelModal"
+import { useNavigate } from "react-router-dom"
 
 export default function Channels() {
-  const [channels, setChannels] = useState<Channel[]>([
-    { id: "1", name: "Alisan Smart Homes", code: "ALISAN", status: "ACTIVE" },
-  ])
+  const [channels, setChannels] = useState<Channel[]>([])
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
+  const navigate = useNavigate()   
+
 
   const [showCreate, setShowCreate] = useState(false)
-  const [name, setName] = useState("")
-  const [code, setCode] = useState("")
+//   const [name, setName] = useState("")
+//   const [code, setCode] = useState("")
 
-  function createChannel() {
-    if (!name || !code) return
 
-    setChannels([
-      ...channels,
-      {
-        id: Date.now().toString(),
-        name,
-        code: code.toUpperCase(),
-        status: "ACTIVE",
-      },
-    ])
+  // LOAD CHANNELS FROM BACKEND
+  useEffect(() => {
+    ChannelAPI.list()
+      .then(setChannels)
+      .catch((e) => setError(e.message))
+      .finally(() => setLoading(false))
+  }, [])
 
-    setName("")
-    setCode("")
+  async function createChannel(input: { name: string; code: string }) {
+  try {
+    const created = await ChannelAPI.create({
+      name: input.name,
+      code: input.code,
+    })
+
+    setChannels((prev) => [...prev, created])
     setShowCreate(false)
+  } catch (e: any) {
+    alert(e.message)
   }
+}
+
+async function deactivateChannel(id: string) {
+  if (!confirm("Freeze this channel?")) return
+
+  try {
+    const updated = await ChannelAPI.deactivate(id)
+
+    setChannels((prev) =>
+      prev.map((c) => (c.id === id ? updated : c))
+    )
+  } catch (e: any) {
+    alert(e.message)
+  }
+}
+
+
+
+
+  if (loading) return <div>Loading channels…</div>
+  if (error) return <div className="text-red-500">{error}</div>
 
   return (
     <div className="space-y-6">
@@ -63,13 +87,35 @@ export default function Channels() {
                 <td className="px-4 py-2">{c.name}</td>
                 <td className="px-4 py-2 font-mono">{c.code}</td>
                 <td className="px-4 py-2">
-                  <span className={`px-2 py-1 rounded text-xs ${c.status === "ACTIVE" ? "bg-emerald-700" : "bg-zinc-700"}`}>
+                  <span
+                    className={`px-2 py-1 rounded text-xs ${
+                      c.status === "ACTIVE"
+                        ? "bg-emerald-700"
+                        : "bg-zinc-700"
+                    }`}
+                  >
                     {c.status}
                   </span>
                 </td>
                 <td className="px-4 py-2 text-right space-x-2">
-                  <button className="text-zinc-400 hover:text-white">View</button>
-                  <button className="text-red-500 hover:text-red-400">Delete</button>
+                <button
+  onClick={() => navigate(`/channels/${c.id}`)}
+  className="text-zinc-400 hover:text-white"
+>
+  View
+</button>
+
+                  {c.status === "ACTIVE" ? (
+  <button
+    onClick={() => deactivateChannel(c.id)}
+    className="text-red-500 hover:text-red-400"
+  >
+    Freeze
+  </button>
+) : (
+  <span className="text-zinc-500 text-sm">Frozen</span>
+)}
+
                 </td>
               </tr>
             ))}
@@ -78,46 +124,15 @@ export default function Channels() {
       </div>
 
       {/* Create Channel Modal */}
-      {showCreate && (
-        <div className="fixed inset-0 bg-black/60 flex items-center justify-center">
-          <div className="bg-zinc-900 border border-zinc-800 rounded-lg w-full max-w-md p-6 space-y-4">
-            <h2 className="text-lg font-semibold">Create Channel</h2>
+{showCreate && (
+  <CreateChannelModal
+    onClose={() => setShowCreate(false)}
+    onCreate={createChannel}
+  />
+)}
 
-            <div className="space-y-2">
-              <label className="text-sm text-zinc-400">Channel Name</label>
-              <input
-                value={name}
-                onChange={(e) => setName(e.target.value)}
-                className="w-full px-3 py-2 bg-zinc-800 rounded"
-              />
-            </div>
 
-            <div className="space-y-2">
-              <label className="text-sm text-zinc-400">Channel Code</label>
-              <input
-                value={code}
-                onChange={(e) => setCode(e.target.value)}
-                className="w-full px-3 py-2 bg-zinc-800 rounded font-mono"
-              />
-            </div>
-
-            <div className="flex justify-end gap-3">
-              <button
-                onClick={() => setShowCreate(false)}
-                className="px-4 py-2 bg-zinc-700 rounded"
-              >
-                Cancel
-              </button>
-              <button
-                onClick={createChannel}
-                className="px-4 py-2 bg-emerald-600 rounded"
-              >
-                Create
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
+  
     </div>
   )
 }
