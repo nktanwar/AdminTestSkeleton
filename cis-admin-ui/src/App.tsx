@@ -24,8 +24,10 @@ export default function App() {
         <Routes>
           <Route path="/" element={<Dashboard />} />
           <Route path="/channels" element={<Channels />} />
-          <Route path="/members" element={<Members />} />
+          {/* <Route path="/members" element={<Members />} /> */}
           <Route path="/permissions" element={<PermissionSets />} />
+          <Route path="/channels/:channelId/members" element={<Members />} />
+
           <Route path="/demo" element={<DemoSwitch />} />
           <Route path="/channels/:id" element={<ChannelView/>} />
 

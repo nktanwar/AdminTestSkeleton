@@ -26,15 +26,26 @@ export default function ChannelView() {
 
   return (
     <div className="space-y-6 max-w-2xl">
-      <div className="flex justify-between items-center">
-        <h1 className="text-2xl font-semibold">Channel Details</h1>
-        <button
-          onClick={() => navigate(-1)}
-          className="text-sm text-zinc-400 hover:text-white"
-        >
-          ← Back
-        </button>
-      </div>
+<div className="flex justify-between items-center">
+  <h1 className="text-2xl font-semibold">Channel Details</h1>
+
+  <div className="flex items-center gap-3">
+    <button
+      onClick={() => navigate(`/channels/${id}/members`)}
+      className="px-3 py-1.5 rounded bg-emerald-600 hover:bg-emerald-700 text-sm font-medium"
+    >
+      Manage Members
+    </button>
+
+    <button
+      onClick={() => navigate(-1)}
+      className="text-sm text-zinc-400 hover:text-white"
+    >
+      ← Back
+    </button>
+  </div>
+</div>
+
 
       <div className="bg-zinc-900 border border-zinc-800 rounded-lg p-6 space-y-4">
 <Field label="Name" value={channel.name} />

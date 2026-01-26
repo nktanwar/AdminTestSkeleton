@@ -1,48 +1,46 @@
-import { useState } from "react"
-import AddMemberModal from "../components/AddMemberModal"
+import { useEffect, useState } from "react"
+import { useParams } from "react-router-dom"
 
-type MemberStatus = "ACTIVE" | "DISABLED"
-type Level = "OWNER" | "ADMIN" | "STAFF"
+import { ChannelMemberAPI } from "../lib/api"
+import AddChannelMemberModal from "../components/AddChannelMemberModal"
+
+/* ---------- Types ---------- */
+
+type MemberStatus = "ACTIVE" | "DEACTIVATED"
 
 interface Member {
   id: string
   name: string
   email: string
-  level: Level
+  level: string
   permissionSet: string
   status: MemberStatus
 }
 
-const mockMembers: Member[] = [
-  {
-    id: "1",
-    name: "System Admin",
-    email: "admin@alisan.com",
-    level: "OWNER",
-    permissionSet: "ADMIN",
-    status: "ACTIVE",
-  },
-  {
-    id: "2",
-    name: "Sales Lead",
-    email: "sales@alisan.com",
-    level: "ADMIN",
-    permissionSet: "ADMIN",
-    status: "ACTIVE",
-  },
-  {
-    id: "3",
-    name: "Staff User",
-    email: "staff@alisan.com",
-    level: "STAFF",
-    permissionSet: "BASIC",
-    status: "ACTIVE",
-  },
-]
+/* ---------- Page ---------- */
 
 export default function Members() {
-  const [members, setMembers] = useState<Member[]>(mockMembers)
+  const { channelId } = useParams<{ channelId: string }>()
+
+  if (!channelId) {
+    return <div className="text-red-400">Invalid channel</div>
+  }
+
+  const [members, setMembers] = useState<Member[]>([])
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
   const [showModal, setShowModal] = useState(false)
+
+  /* ---------- Load members ---------- */
+  useEffect(() => {
+    setLoading(true)
+    setError(null)
+
+    ChannelMemberAPI.list(channelId)
+      .then(setMembers)
+      .catch((err) => setError(err.message))
+      .finally(() => setLoading(false))
+  }, [channelId])
 
   return (
     <div className="space-y-6">
@@ -57,71 +55,90 @@ export default function Members() {
         </button>
       </div>
 
-      {/* Table */}
-      <div className="bg-zinc-900 border border-zinc-800 rounded-lg">
-        <table className="w-full text-sm">
-          <thead className="border-b border-zinc-800 text-zinc-400">
-            <tr>
-              <th className="text-left px-4 py-3">Name</th>
-              <th className="text-left px-4 py-3">Email</th>
-              <th className="text-left px-4 py-3">Level</th>
-              <th className="text-left px-4 py-3">Permission Set</th>
-              <th className="text-left px-4 py-3">Status</th>
-              <th className="px-4 py-3 text-right">Actions</th>
-            </tr>
-          </thead>
+      {loading && (
+        <div className="text-sm text-zinc-400">Loading members…</div>
+      )}
 
-          <tbody>
-            {members.map((member) => (
-              <tr
-                key={member.id}
-                className="border-b border-zinc-800 hover:bg-zinc-800/40"
-              >
-                <td className="px-4 py-3 font-medium">{member.name}</td>
-                <td className="px-4 py-3 text-zinc-400">{member.email}</td>
+      {error && (
+        <div className="text-sm text-red-400">{error}</div>
+      )}
 
-                <td className="px-4 py-3">
-                  <LevelBadge level={member.level} />
-                </td>
-
-                <td className="px-4 py-3">{member.permissionSet}</td>
-
-                <td className="px-4 py-3">
-                  <StatusBadge status={member.status} />
-                </td>
-
-                <td className="px-4 py-3 text-right">
-                  <button className="text-zinc-400 hover:text-white text-xs">
-                    Edit
-                  </button>
-                </td>
+      {!loading && !error && (
+        <div className="bg-zinc-900 border border-zinc-800 rounded-lg">
+          <table className="w-full text-sm">
+            <thead className="border-b border-zinc-800 text-zinc-400">
+              <tr>
+                <th className="text-left px-4 py-3">Name</th>
+                <th className="text-left px-4 py-3">Email</th>
+                <th className="text-left px-4 py-3">Level</th>
+                <th className="text-left px-4 py-3">Permission Set</th>
+                <th className="text-left px-4 py-3">Status</th>
+                <th className="px-4 py-3 text-right">Actions</th>
               </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
+            </thead>
 
+            <tbody>
+              {members.map((m) => (
+                <tr
+                  key={m.id}
+                  className="border-b border-zinc-800 hover:bg-zinc-800/40"
+                >
+                  <td className="px-4 py-3 font-medium">{m.name}</td>
+                  <td className="px-4 py-3 text-zinc-400">{m.email}</td>
+                  <td className="px-4 py-3">
+                    <LevelBadge level={m.level} />
+                  </td>
+                  <td className="px-4 py-3">{m.permissionSet}</td>
+                  <td className="px-4 py-3">
+                    <StatusBadge status={m.status} />
+                  </td>
+                  <td className="px-4 py-3 text-right">
+                    <button className="text-zinc-400 hover:text-white text-xs">
+                      Edit
+                    </button>
+                  </td>
+                </tr>
+              ))}
+
+              {members.length === 0 && (
+                <tr>
+                  <td
+                    colSpan={6}
+                    className="px-4 py-6 text-center text-zinc-500"
+                  >
+                    No members found
+                  </td>
+                </tr>
+              )}
+            </tbody>
+          </table>
+        </div>
+      )}
+
+      {/* ---------- Add Members Modal ---------- */}
       {showModal && (
-        <AddMemberModal
+        <AddChannelMemberModal
           onClose={() => setShowModal(false)}
-          onAdd={(member) => setMembers((prev) => [...prev, member])}
+          onConfirm={(users) => {
+            // ⛔ TEMP: backend wiring comes next
+            console.log("Selected users for channel:", channelId, users)
+
+            // later this will call:
+            // ChannelMemberAPI.add(channelId, { userIds, levelId })
+
+            setShowModal(false)
+          }}
         />
       )}
     </div>
   )
 }
 
-/* ---------- Small UI Components ---------- */
+/* ---------- UI helpers ---------- */
 
-function LevelBadge({ level }: { level: Level }) {
-  const styles: Record<Level, string> = {
-    OWNER: "bg-yellow-900 text-yellow-300",
-    ADMIN: "bg-blue-900 text-blue-300",
-    STAFF: "bg-zinc-700 text-zinc-300",
-  }
-
+function LevelBadge({ level }: { level: string }) {
   return (
-    <span className={`px-2 py-1 rounded text-xs font-medium ${styles[level]}`}>
+    <span className="px-2 py-1 rounded text-xs font-medium bg-zinc-700 text-zinc-300">
       {level}
     </span>
   )

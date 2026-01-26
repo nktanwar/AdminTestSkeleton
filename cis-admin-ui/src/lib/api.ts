@@ -63,4 +63,81 @@ export const AuthAPI = {
 }
 
 
+/* -------- Channel Members -------- */
+
+export interface ChannelMember {
+  id: string
+  name: string
+  email: string
+  level: string
+  permissionSet: string
+  status: "ACTIVE" | "DEACTIVATED"
+}
+
+export const ChannelMemberAPI = {
+  list: (channelId: string) =>
+    api<ChannelMember[]>(`/api/channels/${channelId}/members`),
+
+  add: (
+    channelId: string,
+    payload: {
+      name: string
+      email: string
+      phone: string
+      levelId: string
+    }
+  ) =>
+    api<ChannelMember>(`/api/channels/${channelId}/members`, {
+      method: "POST",
+      body: JSON.stringify(payload),
+    }),
+}
+
+
+/* -------- Users -------- */
+
+export interface User {
+  id: string
+  name: string
+  email: string
+  phone?: string
+  status: "ACTIVE" | "BLOCKED"
+}
+
+export const UserAPI = {
+  list: () => api<User[]>("/api/users"),
+}
+
+
+
+/* -------- Permissions -------- */
+
+export interface PermissionSet {
+  id: string
+  name: string
+  permissions: string[]
+}
+
+export const PermissionAPI = {
+  listPermissions: () =>
+    api<string[]>("/api/permissions"),
+
+  listSets: () =>
+    api<PermissionSet[]>("/api/permissions/sets"),
+
+  createSet: (name: string) =>
+    api<PermissionSet>("/api/permissions/sets", {
+      method: "POST",
+      body: JSON.stringify({ name }),
+    }),
+
+  updateSet: (id: string, permissions: string[]) =>
+    api<PermissionSet>(`/api/permissions/sets/${id}`, {
+      method: "PUT",
+      body: JSON.stringify({ permissions }),
+    }),
+}
+
+
+
 
