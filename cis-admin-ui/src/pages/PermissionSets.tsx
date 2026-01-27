@@ -60,7 +60,7 @@ export default function PermissionSets() {
   return (
     <div className="grid grid-cols-12 gap-6 h-full">
       {/* Left */}
-      <div className="col-span-3 bg-zinc-900 border border-zinc-800 rounded-lg p-4 space-y-2">
+      <div className="col-span-3 bg-[var(--bg-card)] border border-[var(--border)] rounded-lg p-4 space-y-2">
         <div className="flex justify-between items-center mb-2">
           <h2 className="font-semibold">Permission Sets</h2>
           <button
@@ -78,7 +78,7 @@ export default function PermissionSets() {
             className={`w-full text-left px-3 py-2 rounded text-sm ${
               set.id === activeSetId
                 ? "bg-zinc-800 text-white"
-                : "text-zinc-400 hover:bg-zinc-800/40"
+                : "text-[var(--text-muted)] hover:bg-zinc-800/40"
             }`}
           >
             {set.name}
@@ -87,7 +87,7 @@ export default function PermissionSets() {
       </div>
 
       {/* Right */}
-      <div className="col-span-9 bg-zinc-900 border border-zinc-800 rounded-lg p-6">
+      <div className="col-span-9 bg-[var(--bg-card)] border border-[var(--border)] rounded-lg p-6">
         <h2 className="text-xl font-semibold mb-4">
           {activeSet.name} Permissions
         </h2>

@@ -1,1 +1,38 @@
 @import "tailwindcss";
+
+
+/* -------------------------------
+   Theme tokens
+-------------------------------- */
+
+:root {
+  /* Dark mode (default) */
+  --bg-app: #09090b;
+  --bg-panel: #18181b;
+  --bg-card: #18181b;
+  --border: #27272a;
+  --text-primary: #fafafa;
+  --text-muted: #a1a1aa;
+
+  --accent: #10b981; /* emerald */
+  --accent-soft: rgba(16, 185, 129, 0.15);
+}
+
+.light {
+  /* Light mode */
+  --bg-app: #f5f7fb;
+  --bg-panel: #ffffff;
+  --bg-card: #ffffff;
+  --border: #e5e7eb;
+  --text-primary: #0f172a;
+  --text-muted: #64748b;
+
+  --accent: #2563eb; /* blue */
+  --accent-soft: rgba(37, 99, 235, 0.12);
+}
+
+/* Helpers */
+body {
+  background-color: var(--bg-app);
+  color: var(--text-primary);
+}

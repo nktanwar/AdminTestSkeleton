@@ -1,77 +1,82 @@
-import { useEffect, useState } from "react"
 import { useParams, useNavigate } from "react-router-dom"
+import { useEffect, useState } from "react"
 import { ChannelAPI } from "../lib/api"
 import type { Channel } from "../types/channel"
 
 export default function ChannelView() {
-  const { id } = useParams()
+  const { channelId } = useParams()
   const navigate = useNavigate()
-
   const [channel, setChannel] = useState<Channel | null>(null)
-  const [loading, setLoading] = useState(true)
-  const [error, setError] = useState<string | null>(null)
 
   useEffect(() => {
-    if (!id) return
+    if (!channelId) return
+    ChannelAPI.get(channelId).then(setChannel)
+  }, [channelId])
 
-    ChannelAPI.get(id)
-      .then(setChannel)
-      .catch((e) => setError(e.message))
-      .finally(() => setLoading(false))
-  }, [id])
-
-  if (loading) return <div>Loading…</div>
-  if (error) return <div className="text-red-500">{error}</div>
-  if (!channel) return null
+  if (!channel) {
+    return <div className="text-[var(--text-muted)]">Loading…</div>
+  }
 
   return (
-    <div className="space-y-6 max-w-2xl">
-<div className="flex justify-between items-center">
-  <h1 className="text-2xl font-semibold">Channel Details</h1>
+    <div className="space-y-6">
+      {/* Header */}
+      <div className="flex justify-between items-center">
+        <h2 className="text-xl font-semibold">
+          Channel Overview
+        </h2>
 
-  <div className="flex items-center gap-3">
-    <button
-      onClick={() => navigate(`/channels/${id}/members`)}
-      className="px-3 py-1.5 rounded bg-emerald-600 hover:bg-emerald-700 text-sm font-medium"
-    >
-      Manage Members
-    </button>
-
-    <button
-      onClick={() => navigate(-1)}
-      className="text-sm text-zinc-400 hover:text-white"
-    >
-      ← Back
-    </button>
-  </div>
-</div>
-
-
-      <div className="bg-zinc-900 border border-zinc-800 rounded-lg p-6 space-y-4">
-<Field label="Name" value={channel.name} />
-<Field label="Code" value={channel.code} mono />
-<Field label="Status" value={channel.status} />
-
-<Field
-  label="Wallet Enabled"
-  value={channel.walletEnabled ? "Yes" : "No"}
-/>
-
-<Field
-  label="Knowledge Center Access"
-  value={channel.knowledgeCenterAccess ? "Yes" : "No"}
-/>
-
-<Field
-  label="Created At"
-  value={channel.createdAt ?? "—"}
-/>
-
-{channel.updatedAt && (
-  <Field label="Updated At" value={channel.updatedAt} />
-)}
-
+        <button
+          onClick={() => navigate(-1)}
+          className="text-sm text-[var(--text-muted)] hover:text-white"
+        >
+          ← Back
+        </button>
       </div>
+
+      {/* Stats */}
+      <div className="grid grid-cols-3 gap-4">
+        <StatCard label="Status" value={channel.status} />
+        <StatCard
+          label="Wallet Enabled"
+          value={channel.walletEnabled ? "Yes" : "No"}
+        />
+        <StatCard
+          label="Knowledge Center"
+          value={
+            channel.knowledgeCenterAccess
+              ? "Enabled"
+              : "Disabled"
+          }
+        />
+      </div>
+
+      {/* Metadata */}
+      <div className="bg-[var(--bg-card)] border border-[var(--border)] rounded-lg p-6 space-y-3">
+        <Field
+          label="Created At"
+          value={channel.createdAt ?? "—"}
+        />
+
+        <Field
+          label="Updated At"
+          value={channel.updatedAt ?? "—"}
+        />
+      </div>
+    </div>
+  )
+}
+
+function StatCard({
+  label,
+  value,
+}: {
+  label: string
+  value: string
+}) {
+  return (
+    <div className="bg-[var(--bg-card)] border border-[var(--border)] rounded-lg p-4">
+      <div className="text-xs text-[var(--text-muted)]">{label}</div>
+      <div className="text-lg font-semibold">{value}</div>
     </div>
   )
 }
@@ -79,16 +84,14 @@ export default function ChannelView() {
 function Field({
   label,
   value,
-  mono,
 }: {
   label: string
   value: string
-  mono?: boolean
 }) {
   return (
     <div>
-      <div className="text-xs text-zinc-400">{label}</div>
-      <div className={mono ? "font-mono" : ""}>{value}</div>
+      <div className="text-xs text-[var(--text-muted)]">{label}</div>
+      <div>{value}</div>
     </div>
   )
 }

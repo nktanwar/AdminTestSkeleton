@@ -24,7 +24,7 @@ export default function Login({ onSuccess }: { onSuccess: () => void }) {
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-zinc-950">
-      <div className="bg-zinc-900 border border-zinc-800 rounded-lg p-6 w-full max-w-sm space-y-4">
+      <div className="bg-[var(--bg-card)] border border-[var(--border)] rounded-lg p-6 w-full max-w-sm space-y-4">
         <h1 className="text-xl font-semibold">Admin Login</h1>
 
         <input
