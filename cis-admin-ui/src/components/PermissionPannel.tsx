@@ -20,7 +20,7 @@ export function PermissionPanel({ actor }: PermissionPanelProps) {
   }
 
   return (
-    <div className="bg-zinc-900 border border-zinc-800 rounded-lg p-4">
+    <div className="bg-[var(--bg-card)] border border-[var(--border)] rounded-lg p-4">
       <h2 className="font-semibold mb-2">
         Your Permissions
       </h2>
