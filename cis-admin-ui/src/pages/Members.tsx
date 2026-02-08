@@ -56,7 +56,7 @@ export default function Members() {
       </div>
 
       {loading && (
-        <div className="text-sm text-zinc-400">Loading members…</div>
+        <div className="text-sm text-[var(--text-muted)]">Loading members…</div>
       )}
 
       {error && (
@@ -64,9 +64,9 @@ export default function Members() {
       )}
 
       {!loading && !error && (
-        <div className="bg-zinc-900 border border-zinc-800 rounded-lg">
+        <div className="bg-[var(--bg-card)] border border-[var(--border)] rounded-lg">
           <table className="w-full text-sm">
-            <thead className="border-b border-zinc-800 text-zinc-400">
+            <thead className="border-b border-[var(--border)] text-[var(--text-muted)]">
               <tr>
                 <th className="text-left px-4 py-3">Name</th>
                 <th className="text-left px-4 py-3">Email</th>
@@ -81,10 +81,10 @@ export default function Members() {
               {members.map((m) => (
                 <tr
                   key={m.id}
-                  className="border-b border-zinc-800 hover:bg-zinc-800/40"
+                  className="border-b border-[var(--border)] hover:bg-zinc-800/40"
                 >
                   <td className="px-4 py-3 font-medium">{m.name}</td>
-                  <td className="px-4 py-3 text-zinc-400">{m.email}</td>
+                  <td className="px-4 py-3 text-[var(--text-muted)]">{m.email}</td>
                   <td className="px-4 py-3">
                     <LevelBadge level={m.level} />
                   </td>
@@ -93,7 +93,7 @@ export default function Members() {
                     <StatusBadge status={m.status} />
                   </td>
                   <td className="px-4 py-3 text-right">
-                    <button className="text-zinc-400 hover:text-white text-xs">
+                    <button className="text-[var(--text-muted)] hover:text-white text-xs">
                       Edit
                     </button>
                   </td>

@@ -8,15 +8,10 @@ export default function Channels() {
   const [channels, setChannels] = useState<Channel[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
-  const navigate = useNavigate()   
-
+  const navigate = useNavigate()
 
   const [showCreate, setShowCreate] = useState(false)
-//   const [name, setName] = useState("")
-//   const [code, setCode] = useState("")
 
-
-  // LOAD CHANNELS FROM BACKEND
   useEffect(() => {
     ChannelAPI.list()
       .then(setChannels)
@@ -24,36 +19,31 @@ export default function Channels() {
       .finally(() => setLoading(false))
   }, [])
 
-  async function createChannel(input: { name: string; code: string }) {
-  try {
-    const created = await ChannelAPI.create({
-      name: input.name,
-      code: input.code,
-    })
-
-    setChannels((prev) => [...prev, created])
-    setShowCreate(false)
-  } catch (e: any) {
-    alert(e.message)
+  async function createChannel(input: {
+    name: string
+    code: string
+  }) {
+    try {
+      const created = await ChannelAPI.create(input)
+      setChannels((prev) => [...prev, created])
+      setShowCreate(false)
+    } catch (e: any) {
+      alert(e.message)
+    }
   }
-}
 
-async function deactivateChannel(id: string) {
-  if (!confirm("Freeze this channel?")) return
+  async function deactivateChannel(id: string) {
+    if (!confirm("Freeze this channel?")) return
 
-  try {
-    const updated = await ChannelAPI.deactivate(id)
-
-    setChannels((prev) =>
-      prev.map((c) => (c.id === id ? updated : c))
-    )
-  } catch (e: any) {
-    alert(e.message)
+    try {
+      const updated = await ChannelAPI.deactivate(id)
+      setChannels((prev) =>
+        prev.map((c) => (c.id === id ? updated : c))
+      )
+    } catch (e: any) {
+      alert(e.message)
+    }
   }
-}
-
-
-
 
   if (loading) return <div>Loading channels…</div>
   if (error) return <div className="text-red-500">{error}</div>
@@ -70,8 +60,7 @@ async function deactivateChannel(id: string) {
         </button>
       </div>
 
-      {/* Channel Table */}
-      <div className="bg-zinc-900 border border-zinc-800 rounded-lg overflow-hidden">
+      <div className="bg-[var(--bg-card)] border border-[var(--border)] rounded-lg overflow-hidden">
         <table className="w-full text-sm">
           <thead className="bg-zinc-800 text-zinc-300">
             <tr>
@@ -81,9 +70,13 @@ async function deactivateChannel(id: string) {
               <th className="text-right px-4 py-2">Actions</th>
             </tr>
           </thead>
+
           <tbody>
             {channels.map((c) => (
-              <tr key={c.id} className="border-t border-zinc-800">
+              <tr
+                key={c.id}
+                className="border-t border-[var(--border)]"
+              >
                 <td className="px-4 py-2">{c.name}</td>
                 <td className="px-4 py-2 font-mono">{c.code}</td>
                 <td className="px-4 py-2">
@@ -97,25 +90,33 @@ async function deactivateChannel(id: string) {
                     {c.status}
                   </span>
                 </td>
+
                 <td className="px-4 py-2 text-right space-x-2">
-                <button
-  onClick={() => navigate(`/channels/${c.id}`)}
-  className="text-zinc-400 hover:text-white"
->
-  View
-</button>
+                  {/* PRIMARY */}
+                  <button
+                    onClick={() =>
+                      navigate(`/channels/${c.id}`)
+                    }
+                    className="px-3 py-1 rounded bg-emerald-600 hover:bg-emerald-700 text-xs font-medium"
+                  >
+                    View
+                  </button>
 
+                  {/* SECONDARY / DESTRUCTIVE */}
                   {c.status === "ACTIVE" ? (
-  <button
-    onClick={() => deactivateChannel(c.id)}
-    className="text-red-500 hover:text-red-400"
-  >
-    Freeze
-  </button>
-) : (
-  <span className="text-zinc-500 text-sm">Frozen</span>
-)}
-
+                    <button
+                      onClick={() =>
+                        deactivateChannel(c.id)
+                      }
+                      className="text-red-500 hover:text-red-400 text-xs"
+                    >
+                      Freeze
+                    </button>
+                  ) : (
+                    <span className="text-zinc-500 text-xs">
+                      Frozen
+                    </span>
+                  )}
                 </td>
               </tr>
             ))}
@@ -123,16 +124,12 @@ async function deactivateChannel(id: string) {
         </table>
       </div>
 
-      {/* Create Channel Modal */}
-{showCreate && (
-  <CreateChannelModal
-    onClose={() => setShowCreate(false)}
-    onCreate={createChannel}
-  />
-)}
-
-
-  
+      {showCreate && (
+        <CreateChannelModal
+          onClose={() => setShowCreate(false)}
+          onCreate={createChannel}
+        />
+      )}
     </div>
   )
 }

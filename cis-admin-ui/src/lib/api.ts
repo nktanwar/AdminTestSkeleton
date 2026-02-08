@@ -139,5 +139,55 @@ export const PermissionAPI = {
 }
 
 
+/* -------- Funnels (UI) -------- */
+
+export interface FunnelUi {
+  id: string
+  stage: string
+
+  channelId: string
+  channelName: string
+
+  ownerMemberId: string
+  ownerName: string
+
+  customerName: string
+  customerPhone: string
+  customerEmail?: string | null
+}
+
+// export const FunnelAPI = {
+//   listUi: () =>
+//     api<FunnelUi[]>("/internal/funnels/ui"),
+
+//   getUi: (id: string) =>
+//     api<FunnelUi>(`/internal/funnels/ui/${id}`),
+// }
+
+
+/* -------- Funnels (UI) -------- */
+
+export interface CreateFunnelPayload {
+  channelId: string
+  ownerMemberId: string
+  customerName: string
+  customerPhone: string
+  customerEmail?: string | null
+  source: "ADMIN"
+}
+
+export const FunnelAPI = {
+  create: (payload: CreateFunnelPayload) =>
+    api("/internal/funnels", {
+      method: "POST",
+      body: JSON.stringify(payload),
+    }),
+
+  getUi: (id: string) =>
+    api(`/internal/funnels/ui/${id}`),
+}
+
+
+
 
 

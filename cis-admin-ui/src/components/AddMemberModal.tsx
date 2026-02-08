@@ -25,7 +25,7 @@ export default function AddMemberModal({ onClose, onAdd }: Props) {
 
   return (
     <div className="fixed inset-0 bg-black/60 flex items-center justify-center">
-      <div className="bg-zinc-900 border border-zinc-800 rounded-lg w-full max-w-md p-6 space-y-4">
+      <div className="bg-[var(--bg-card)] border border-[var(--border)] rounded-lg w-full max-w-md p-6 space-y-4">
         <h2 className="text-lg font-semibold">Add Member</h2>
 
         <Input label="Name" value={name} onChange={setName} />
@@ -46,7 +46,7 @@ export default function AddMemberModal({ onClose, onAdd }: Props) {
         />
 
         <div className="flex justify-end gap-2 pt-4">
-          <button onClick={onClose} className="text-zinc-400 hover:text-white">
+          <button onClick={onClose} className="text-[var(--text-muted)] hover:text-white">
             Cancel
           </button>
           <button
@@ -64,7 +64,7 @@ export default function AddMemberModal({ onClose, onAdd }: Props) {
 function Input({ label, value, onChange }: any) {
   return (
     <div className="space-y-1">
-      <label className="text-sm text-zinc-400">{label}</label>
+      <label className="text-sm text-[var(--text-muted)]">{label}</label>
       <input
         value={value}
         onChange={(e) => onChange(e.target.value)}
@@ -77,7 +77,7 @@ function Input({ label, value, onChange }: any) {
 function Select({ label, value, onChange, options }: any) {
   return (
     <div className="space-y-1">
-      <label className="text-sm text-zinc-400">{label}</label>
+      <label className="text-sm text-[var(--text-muted)]">{label}</label>
       <select
         value={value}
         onChange={(e) => onChange(e.target.value)}

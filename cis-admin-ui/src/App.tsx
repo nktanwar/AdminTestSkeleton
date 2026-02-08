@@ -10,9 +10,12 @@ import { useState } from "react"
 import { isLoggedIn } from "./lib/auth"
 import Login from "./pages/Login"
 import ChannelView from "./pages/ChannelView"
+import FunnelView from "./pages/FunnelView"
+import ChannelLayout from "./layout/ChannelLayout"
+import CreateFunnel from "./pages/CreateFunnel"
 
 export default function App() {
-   const [loggedIn, setLoggedIn] = useState(isLoggedIn())
+  const [loggedIn, setLoggedIn] = useState(isLoggedIn())
 
   if (!loggedIn) {
     return <Login onSuccess={() => setLoggedIn(true)} />
@@ -22,15 +25,27 @@ export default function App() {
     <BrowserRouter>
       <AppLayout>
         <Routes>
+          {/* Global */}
           <Route path="/" element={<Dashboard />} />
           <Route path="/channels" element={<Channels />} />
-          {/* <Route path="/members" element={<Members />} /> */}
           <Route path="/permissions" element={<PermissionSets />} />
-          <Route path="/channels/:channelId/members" element={<Members />} />
-
           <Route path="/demo" element={<DemoSwitch />} />
-          <Route path="/channels/:id" element={<ChannelView/>} />
+          <Route path="/funnels/:id" element={<FunnelView />} />
 
+          <Route path="/funnels/new" element={<CreateFunnel />} />
+
+          {/* Channel scoped */}
+          <Route
+            path="/channels/:channelId"
+            element={<ChannelLayout />}
+          >
+            <Route index element={<ChannelView />} />
+            <Route path="members" element={<Members />} />
+            <Route
+              path="permissions"
+              element={<PermissionSets />}
+            />
+          </Route>
         </Routes>
       </AppLayout>
     </BrowserRouter>

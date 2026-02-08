@@ -20,7 +20,7 @@ export default function CreateChannelModal({ onClose, onCreate }: Props) {
 
   return (
     <div className="fixed inset-0 bg-black/60 flex items-center justify-center">
-      <div className="bg-zinc-900 border border-zinc-800 rounded-lg w-full max-w-md p-6 space-y-4">
+      <div className="bg-[var(--bg-card)] border border-[var(--border)] rounded-lg w-full max-w-md p-6 space-y-4">
         <h2 className="text-lg font-semibold">Create Channel</h2>
 
         <input
@@ -38,7 +38,7 @@ export default function CreateChannelModal({ onClose, onCreate }: Props) {
         />
 
         <div className="flex justify-end gap-2">
-          <button onClick={onClose} className="px-4 py-2 text-zinc-400">
+          <button onClick={onClose} className="px-4 py-2 text-[var(--text-muted)]">
             Cancel
           </button>
           <button

@@ -37,26 +37,26 @@ export default function AddChannelMemberModal({
 
   return (
     <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50">
-      <div className="bg-zinc-900 border border-zinc-800 rounded-lg w-full max-w-xl p-6 space-y-4">
+      <div className="bg-[var(--bg-card)] border border-[var(--border)] rounded-lg w-full max-w-xl p-6 space-y-4">
         <div className="flex justify-between items-center">
           <h2 className="text-lg font-semibold">Add Members</h2>
           <button
             onClick={onClose}
-            className="text-zinc-400 hover:text-white"
+            className="text-[var(--text-muted)] hover:text-white"
           >
             ✕
           </button>
         </div>
 
-        {loading && <div className="text-sm text-zinc-400">Loading users…</div>}
+        {loading && <div className="text-sm text-[var(--text-muted)]">Loading users…</div>}
         {error && <div className="text-sm text-red-400">{error}</div>}
 
         {!loading && !error && (
-          <div className="max-h-72 overflow-y-auto border border-zinc-800 rounded">
+          <div className="max-h-72 overflow-y-auto border border-[var(--border)] rounded">
             {users.map((u) => (
               <label
                 key={u.id}
-                className="flex items-center gap-3 px-4 py-2 border-b border-zinc-800 hover:bg-zinc-800/40 cursor-pointer"
+                className="flex items-center gap-3 px-4 py-2 border-b border-[var(--border)] hover:bg-zinc-800/40 cursor-pointer"
               >
                 <input
                   type="checkbox"
@@ -66,13 +66,13 @@ export default function AddChannelMemberModal({
                 />
                 <div className="flex-1">
                   <div className="font-medium">{u.name}</div>
-                  <div className="text-xs text-zinc-400">{u.email}</div>
+                  <div className="text-xs text-[var(--text-muted)]">{u.email}</div>
                 </div>
                 <span
                   className={`text-xs px-2 py-1 rounded ${
                     u.status === "ACTIVE"
                       ? "bg-emerald-900 text-emerald-300"
-                      : "bg-zinc-700 text-zinc-400"
+                      : "bg-zinc-700 text-[var(--text-muted)]"
                   }`}
                 >
                   {u.status}
