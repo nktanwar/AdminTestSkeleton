@@ -36,3 +36,61 @@ body {
   background-color: var(--bg-app);
   color: var(--text-primary);
 }
+
+/* Light mode overrides for common dark utility classes */
+.light .bg-zinc-950 {
+  background-color: var(--bg-app);
+}
+.light .bg-zinc-900 {
+  background-color: var(--bg-panel);
+}
+.light .bg-zinc-800 {
+  background-color: #f1f5f9;
+}
+.light .bg-zinc-800\/40 {
+  background-color: rgba(226, 232, 240, 0.6);
+}
+.light .bg-zinc-800\/60 {
+  background-color: rgba(226, 232, 240, 0.8);
+}
+.light .bg-zinc-700 {
+  background-color: #e2e8f0;
+}
+.light .bg-zinc-600 {
+  background-color: #cbd5e1;
+}
+.light .text-white,
+.light .text-zinc-100 {
+  color: var(--text-primary);
+}
+.light .text-zinc-200 {
+  color: #1f2937;
+}
+.light .text-zinc-300 {
+  color: #334155;
+}
+.light .text-zinc-400 {
+  color: #475569;
+}
+.light .text-zinc-500 {
+  color: #64748b;
+}
+.light .border-zinc-700,
+.light .border-zinc-800 {
+  border-color: var(--border);
+}
+.light .hover\:bg-zinc-800:hover {
+  background-color: #f1f5f9;
+}
+.light .hover\:bg-zinc-800\/40:hover {
+  background-color: rgba(226, 232, 240, 0.6);
+}
+.light .hover\:bg-zinc-700:hover {
+  background-color: #e2e8f0;
+}
+.light .hover\:bg-zinc-600:hover {
+  background-color: #d4deec;
+}
+.light .hover\:text-white:hover {
+  color: var(--text-primary);
+}
