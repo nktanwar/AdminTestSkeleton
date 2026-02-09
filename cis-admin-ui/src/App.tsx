@@ -13,6 +13,7 @@ import ChannelView from "./pages/ChannelView"
 import FunnelView from "./pages/FunnelView"
 import ChannelLayout from "./layout/ChannelLayout"
 import CreateFunnel from "./pages/CreateFunnel"
+import Profile from "./pages/Profile"
 
 export default function App() {
   const [loggedIn, setLoggedIn] = useState(isLoggedIn())
@@ -30,6 +31,7 @@ export default function App() {
           <Route path="/channels" element={<Channels />} />
           <Route path="/permissions" element={<PermissionSets />} />
           <Route path="/demo" element={<DemoSwitch />} />
+          <Route path="/profile" element={<Profile />} />
           <Route path="/funnels/:id" element={<FunnelView />} />
 
           <Route path="/funnels/new" element={<CreateFunnel />} />

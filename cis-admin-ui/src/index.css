@@ -1,3 +1,4 @@
+@import url("https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700&display=swap");
 @import "tailwindcss";
 
 
@@ -7,34 +8,60 @@
 
 :root {
   /* Dark mode (default) */
-  --bg-app: #09090b;
-  --bg-panel: #18181b;
-  --bg-card: #18181b;
-  --border: #27272a;
-  --text-primary: #fafafa;
-  --text-muted: #a1a1aa;
+  --bg-app: #0a0d12;
+  --bg-panel: #0f141b;
+  --bg-card: #121821;
+  --border: #1f2937;
+  --text-primary: #f8fafc;
+  --text-muted: #b0bccf;
+  --text-soft: #cbd5f5;
 
   --accent: #10b981; /* emerald */
   --accent-soft: rgba(16, 185, 129, 0.15);
+  --accent-strong: #059669;
+
+  --shadow-card: 0 10px 30px rgba(0, 0, 0, 0.35);
+  --shadow-panel: 0 8px 24px rgba(0, 0, 0, 0.25);
 }
 
 .light {
   /* Light mode */
-  --bg-app: #f5f7fb;
+  --bg-app: #f6f8fc;
   --bg-panel: #ffffff;
   --bg-card: #ffffff;
-  --border: #e5e7eb;
+  --border: #e2e8f0;
   --text-primary: #0f172a;
-  --text-muted: #64748b;
+  --text-muted: #4b5563;
+  --text-soft: #334155;
 
   --accent: #2563eb; /* blue */
   --accent-soft: rgba(37, 99, 235, 0.12);
+  --accent-strong: #1d4ed8;
+
+  --shadow-card: 0 10px 24px rgba(15, 23, 42, 0.12);
+  --shadow-panel: 0 8px 20px rgba(15, 23, 42, 0.1);
 }
 
 /* Helpers */
 body {
   background-color: var(--bg-app);
   color: var(--text-primary);
+  font-family: "Manrope", "Space Grotesk", "Work Sans", sans-serif;
+  letter-spacing: 0.1px;
+  -webkit-font-smoothing: antialiased;
+  font-weight: 500;
+}
+
+h1,
+h2,
+h3 {
+  font-weight: 700;
+}
+
+h4,
+h5,
+h6 {
+  font-weight: 600;
 }
 
 /* Light mode overrides for common dark utility classes */
