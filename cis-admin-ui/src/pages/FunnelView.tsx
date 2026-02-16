@@ -1,45 +1,21 @@
-import { useEffect, useState } from "react"
+import { useQuery } from "@tanstack/react-query"
 import { useParams, useNavigate } from "react-router-dom"
 import { FunnelAPI, type FunnelUi } from "../lib/api"
 
-/* ---------------------------------------------
-   Component
----------------------------------------------- */
 export default function FunnelView() {
   const { id } = useParams<{ id: string }>()
   const navigate = useNavigate()
 
-  const [funnel, setFunnel] = useState<FunnelUi | null>(null)
-  const [loading, setLoading] = useState(true)
-  const [error, setError] = useState<string | null>(null)
+  const funnelQuery = useQuery({
+    queryKey: ["funnel", id],
+    queryFn: () => FunnelAPI.getUi(id!),
+    enabled: !!id,
+  })
 
-  /* ---------- Load funnel (UI endpoint) ---------- */
-  useEffect(() => {
-    if (!id) {
-      setError("Invalid funnel id")
-      setLoading(false)
-      return
-    }
-
-    FunnelAPI.getUi(id)
-      .then(setFunnel)
-      .catch((e: any) => setError(e.message))
-      .finally(() => setLoading(false))
-  }, [id])
-
-  /* ---------- Guards ---------- */
-  if (loading) {
-    return (
-      <div className="p-6 text-[var(--text-muted)]">
-        Loading funnel…
-      </div>
-    )
-  }
-
-  if (error) {
+  if (!id) {
     return (
       <div className="p-6 space-y-4">
-        <div className="text-red-500">{error}</div>
+        <div className="text-red-500">Invalid funnel id</div>
         <button
           onClick={() => navigate(-1)}
           className="text-sm text-[var(--text-muted)] hover:text-white"
@@ -50,6 +26,34 @@ export default function FunnelView() {
     )
   }
 
+  if (funnelQuery.isLoading) {
+    return (
+      <div className="p-6 text-[var(--text-muted)]">
+        Loading funnel…
+      </div>
+    )
+  }
+
+  if (funnelQuery.error) {
+    return (
+      <div className="p-6 space-y-4">
+        <div className="text-red-500">
+          {funnelQuery.error instanceof Error
+            ? funnelQuery.error.message
+            : "Failed to load funnel"}
+        </div>
+        <button
+          onClick={() => navigate(-1)}
+          className="text-sm text-[var(--text-muted)] hover:text-white"
+        >
+          ← Back
+        </button>
+      </div>
+    )
+  }
+
+  const funnel: FunnelUi | undefined = funnelQuery.data
+
   if (!funnel) {
     return (
       <div className="p-6 text-[var(--text-muted)]">
@@ -58,7 +62,6 @@ export default function FunnelView() {
     )
   }
 
-  /* ---------- UI ---------- */
   return (
     <div className="space-y-6 max-w-xl p-6">
       <div className="flex justify-between items-center">
@@ -74,7 +77,6 @@ export default function FunnelView() {
         </button>
       </div>
 
-      {/* Funnel summary */}
       <div className="bg-[var(--bg-card)] border border-[var(--border)] rounded-lg p-4 space-y-4">
         <Field label="Stage" value={funnel.stage} badge />
 
@@ -89,7 +91,6 @@ export default function FunnelView() {
         />
       </div>
 
-      {/* Customer snapshot */}
       <div className="bg-[var(--bg-card)] border border-[var(--border)] rounded-lg p-4 space-y-3">
         <h3 className="font-semibold text-sm text-zinc-300">
           Customer
@@ -109,9 +110,6 @@ export default function FunnelView() {
   )
 }
 
-/* ---------------------------------------------
-   Field helper
----------------------------------------------- */
 function Field({
   label,
   value,

@@ -1,4 +1,5 @@
-import { useEffect, useState } from "react"
+import { useState } from "react"
+import { useQuery } from "@tanstack/react-query"
 import { UserAPI, type User } from "../lib/api"
 
 interface Props {
@@ -10,17 +11,14 @@ export default function AddChannelMemberModal({
   onClose,
   onConfirm,
 }: Props) {
-  const [users, setUsers] = useState<User[]>([])
   const [selected, setSelected] = useState<Set<string>>(new Set())
-  const [loading, setLoading] = useState(true)
-  const [error, setError] = useState<string | null>(null)
 
-  useEffect(() => {
-    UserAPI.list()
-      .then(setUsers)
-      .catch((e) => setError(e.message))
-      .finally(() => setLoading(false))
-  }, [])
+  const usersQuery = useQuery({
+    queryKey: ["users", "all"],
+    queryFn: UserAPI.list,
+  })
+
+  const users = usersQuery.data ?? []
 
   function toggle(id: string) {
     setSelected((prev) => {
@@ -48,10 +46,20 @@ export default function AddChannelMemberModal({
           </button>
         </div>
 
-        {loading && <div className="text-sm text-[var(--text-muted)]">Loading users…</div>}
-        {error && <div className="text-sm text-red-400">{error}</div>}
+        {usersQuery.isLoading && (
+          <div className="text-sm text-[var(--text-muted)]">
+            Loading users…
+          </div>
+        )}
+        {usersQuery.error && (
+          <div className="text-sm text-red-400">
+            {usersQuery.error instanceof Error
+              ? usersQuery.error.message
+              : "Failed to load users"}
+          </div>
+        )}
 
-        {!loading && !error && (
+        {!usersQuery.isLoading && !usersQuery.error && (
           <div className="max-h-72 overflow-y-auto border border-[var(--border)] rounded">
             {users.map((u) => (
               <label
