@@ -1,42 +1,102 @@
 import { useEffect, useMemo, useState } from "react"
+import {
+  useMutation,
+  useQuery,
+  useQueryClient,
+} from "@tanstack/react-query"
 import { PermissionAPI, type PermissionSet } from "../lib/api"
 import CreatePermissionSetModal from "../components/CreatePermissionSetModal"
 
+function toErrorMessage(error: unknown): string {
+  if (error instanceof Error) return error.message
+  return "Something went wrong"
+}
+
 export default function PermissionSets() {
-  const [allPermissions, setAllPermissions] = useState<string[]>([])
+  const queryClient = useQueryClient()
+
   const [sets, setSets] = useState<PermissionSet[]>([])
   const [savedSets, setSavedSets] = useState<PermissionSet[]>([])
   const [activeSetId, setActiveSetId] = useState<string | null>(null)
-  const [loading, setLoading] = useState(true)
-  const [error, setError] = useState<string | null>(null)
-  const [saving, setSaving] = useState(false)
-  const [creating, setCreating] = useState(false)
-  const [createError, setCreateError] = useState<string | null>(null)
   const [showCreate, setShowCreate] = useState(false)
   const [permissionFilter, setPermissionFilter] = useState("")
 
-  useEffect(() => {
-    Promise.all([
-      PermissionAPI.listPermissions(),
-      PermissionAPI.listSets(),
-    ])
-      .then(([perms, list]) => {
-        setAllPermissions(perms)
-        setSets(list)
-        setSavedSets(list)
-        if (list.length > 0) setActiveSetId(list[0].id)
-      })
-      .catch((e) => setError(e.message))
-      .finally(() => setLoading(false))
-  }, [])
+  const permissionsQuery = useQuery({
+    queryKey: ["permissions", "all"],
+    queryFn: PermissionAPI.listPermissions,
+  })
 
+  const setsQuery = useQuery({
+    queryKey: ["permissionSets"],
+    queryFn: PermissionAPI.listSets,
+  })
+
+  useEffect(() => {
+    if (!setsQuery.data) return
+
+    setSets(setsQuery.data)
+    setSavedSets(setsQuery.data)
+    setActiveSetId((prev) => {
+      if (prev && setsQuery.data.some((s) => s.id === prev)) {
+        return prev
+      }
+      return setsQuery.data[0]?.id ?? null
+    })
+  }, [setsQuery.data])
+
+  const createSetMutation = useMutation({
+    mutationFn: (name: string) => PermissionAPI.createSet(name),
+    onSuccess: (created) => {
+      queryClient.setQueryData<PermissionSet[]>(
+        ["permissionSets"],
+        (prev) => [...(prev ?? []), created]
+      )
+
+      setSets((prev) => [...prev, created])
+      setSavedSets((prev) => [...prev, created])
+      setActiveSetId(created.id)
+      setShowCreate(false)
+    },
+  })
+
+  const updateSetMutation = useMutation({
+    mutationFn: ({
+      id,
+      permissions,
+    }: {
+      id: string
+      permissions: string[]
+    }) => PermissionAPI.updateSet(id, permissions),
+    onSuccess: (saved) => {
+      queryClient.setQueryData<PermissionSet[]>(
+        ["permissionSets"],
+        (prev) =>
+          (prev ?? []).map((s) =>
+            s.id === saved.id ? saved : s
+          )
+      )
+
+      setSets((prev) =>
+        prev.map((s) => (s.id === saved.id ? saved : s))
+      )
+      setSavedSets((prev) =>
+        prev.map((s) => (s.id === saved.id ? saved : s))
+      )
+    },
+  })
+
+  const allPermissions = permissionsQuery.data ?? []
   const activeSet = sets.find((s) => s.id === activeSetId)
-  const activeSaved = savedSets.find((s) => s.id === activeSetId)
+  const activeSaved = savedSets.find(
+    (s) => s.id === activeSetId
+  )
 
   const filteredPermissions = useMemo(() => {
     const q = permissionFilter.trim().toLowerCase()
     if (!q) return allPermissions
-    return allPermissions.filter((p) => p.toLowerCase().includes(q))
+    return allPermissions.filter((p) =>
+      p.toLowerCase().includes(q)
+    )
   }, [allPermissions, permissionFilter])
 
   function normalize(perms: string[]) {
@@ -60,7 +120,9 @@ export default function PermissionSets() {
 
     setSets((prev) =>
       prev.map((s) =>
-        s.id === activeSet.id ? { ...s, permissions: updated } : s
+        s.id === activeSet.id
+          ? { ...s, permissions: updated }
+          : s
       )
     )
   }
@@ -68,39 +130,21 @@ export default function PermissionSets() {
   async function saveChanges() {
     if (!activeSet) return
 
-    setSaving(true)
     try {
-      const saved = await PermissionAPI.updateSet(
-        activeSet.id,
-        activeSet.permissions
-      )
-
-      setSets((prev) =>
-        prev.map((s) => (s.id === saved.id ? saved : s))
-      )
-      setSavedSets((prev) =>
-        prev.map((s) => (s.id === saved.id ? saved : s))
-      )
+      await updateSetMutation.mutateAsync({
+        id: activeSet.id,
+        permissions: activeSet.permissions,
+      })
     } catch (e: any) {
       alert(e.message)
-    } finally {
-      setSaving(false)
     }
   }
 
   async function createNewSet(name: string) {
-    setCreating(true)
-    setCreateError(null)
     try {
-      const created = await PermissionAPI.createSet(name)
-      setSets((prev) => [...prev, created])
-      setSavedSets((prev) => [...prev, created])
-      setActiveSetId(created.id)
-      setShowCreate(false)
-    } catch (e: any) {
-      setCreateError(e.message)
-    } finally {
-      setCreating(false)
+      await createSetMutation.mutateAsync(name)
+    } catch {
+      // Error is surfaced in modal.
     }
   }
 
@@ -114,13 +158,26 @@ export default function PermissionSets() {
     setActiveSetId(id)
   }
 
-  if (loading) return <div>Loading permission sets…</div>
-  if (error) return <div className="text-red-500">{error}</div>
+  const loading =
+    permissionsQuery.isLoading || setsQuery.isLoading
+  const baseError =
+    permissionsQuery.error || setsQuery.error || null
+
+  if (loading) return <div>Loading permission sets...</div>
+  if (baseError) {
+    return (
+      <div className="text-red-500">
+        {toErrorMessage(baseError)}
+      </div>
+    )
+  }
 
   if (!activeSet) {
     return (
       <div className="bg-[var(--bg-card)] border border-[var(--border)] rounded-lg p-6 space-y-4">
-        <div className="text-lg font-semibold">Permission Sets</div>
+        <div className="text-lg font-semibold">
+          Permission Sets
+        </div>
         <div className="text-sm text-[var(--text-muted)]">
           No permission sets yet.
         </div>
@@ -135,8 +192,12 @@ export default function PermissionSets() {
           <CreatePermissionSetModal
             onClose={() => setShowCreate(false)}
             onCreate={createNewSet}
-            creating={creating}
-            error={createError}
+            creating={createSetMutation.isPending}
+            error={
+              createSetMutation.error
+                ? toErrorMessage(createSetMutation.error)
+                : null
+            }
           />
         )}
       </div>
@@ -145,7 +206,6 @@ export default function PermissionSets() {
 
   return (
     <div className="grid grid-cols-12 gap-6 h-full">
-      {/* Left */}
       <div className="col-span-3 bg-[var(--bg-card)] border border-[var(--border)] rounded-lg p-4 space-y-2">
         <div className="flex justify-between items-center mb-2">
           <h2 className="font-semibold">Permission Sets</h2>
@@ -172,7 +232,6 @@ export default function PermissionSets() {
         ))}
       </div>
 
-      {/* Right */}
       <div className="col-span-9 bg-[var(--bg-card)] border border-[var(--border)] rounded-lg p-6">
         <div className="flex justify-between items-center mb-4">
           <h2 className="text-xl font-semibold">
@@ -188,8 +247,10 @@ export default function PermissionSets() {
         <div className="mb-4">
           <input
             value={permissionFilter}
-            onChange={(e) => setPermissionFilter(e.target.value)}
-            placeholder="Search permissions…"
+            onChange={(e) =>
+              setPermissionFilter(e.target.value)
+            }
+            placeholder="Search permissions..."
             className="w-full bg-zinc-800 rounded px-3 py-2"
           />
         </div>
@@ -202,8 +263,12 @@ export default function PermissionSets() {
             >
               <input
                 type="checkbox"
-                checked={activeSet.permissions.includes(permission)}
-                onChange={() => togglePermission(permission)}
+                checked={activeSet.permissions.includes(
+                  permission
+                )}
+                onChange={() =>
+                  togglePermission(permission)
+                }
                 className="accent-emerald-500"
               />
               <span className="text-sm">{permission}</span>
@@ -220,10 +285,12 @@ export default function PermissionSets() {
         <div className="flex justify-end mt-6">
           <button
             onClick={saveChanges}
-            disabled={!isDirty || saving}
+            disabled={!isDirty || updateSetMutation.isPending}
             className="bg-emerald-600 hover:bg-emerald-700 px-5 py-2 rounded font-medium disabled:opacity-50"
           >
-            {saving ? "Saving…" : "Save Changes"}
+            {updateSetMutation.isPending
+              ? "Saving..."
+              : "Save Changes"}
           </button>
         </div>
       </div>
@@ -232,8 +299,12 @@ export default function PermissionSets() {
         <CreatePermissionSetModal
           onClose={() => setShowCreate(false)}
           onCreate={createNewSet}
-          creating={creating}
-          error={createError}
+          creating={createSetMutation.isPending}
+          error={
+            createSetMutation.error
+              ? toErrorMessage(createSetMutation.error)
+              : null
+          }
         />
       )}
     </div>

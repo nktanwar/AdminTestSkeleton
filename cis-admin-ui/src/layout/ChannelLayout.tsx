@@ -1,28 +1,30 @@
 import { Outlet, useParams, NavLink } from "react-router-dom"
-import { useEffect, useState } from "react"
+import { useQuery } from "@tanstack/react-query"
 import { ChannelAPI } from "../lib/api"
-import type { Channel } from "../types/channel"
 
 export default function ChannelLayout() {
   const { channelId } = useParams()
-  const [channel, setChannel] = useState<Channel | null>(null)
-  const [error, setError] = useState<string | null>(null)
 
-  useEffect(() => {
-    if (!channelId) return
+  const channelQuery = useQuery({
+    queryKey: ["channel", channelId],
+    queryFn: () => ChannelAPI.get(channelId!),
+    enabled: !!channelId,
+  })
 
-    ChannelAPI.get(channelId)
-      .then(setChannel)
-      .catch((e) => setError(e.message))
-  }, [channelId])
-
-  if (error) {
-    return <div className="text-red-500">{error}</div>
+  if (channelQuery.error) {
+    return (
+      <div className="text-red-500">
+        {channelQuery.error instanceof Error
+          ? channelQuery.error.message
+          : "Failed to load channel"}
+      </div>
+    )
   }
 
-  if (!channel) {
+  if (!channelQuery.data) {
     return <div className="text-[var(--text-muted)]">Loading channel…</div>
   }
+  const channel = channelQuery.data
 
   return (
     <div className="space-y-6">

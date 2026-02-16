@@ -1,7 +1,7 @@
 // src/lib/api.ts
 
 import type { Channel } from "../types/channel"
-import { getToken } from "./auth"
+import { clearToken, getToken } from "./auth"
 
 const BASE_URL = "http://localhost:8082"
 
@@ -21,6 +21,9 @@ async function api<T>(
   })
 
   if (!res.ok) {
+    if (res.status === 401) {
+      clearToken()
+    }
     const text = await res.text()
     throw new Error(text || "API error")
   }
@@ -60,6 +63,31 @@ export const AuthAPI = {
       method: "POST",
       body: JSON.stringify({ email }),
     }),
+
+  // Session check used at app bootstrap. If API is unreachable or auth is invalid,
+  // we treat the session as invalid and force logout.
+  validateSession: async () => {
+    const token = getToken()
+    if (!token) return false
+
+    try {
+      const res = await fetch(`${BASE_URL}/internal/channels`, {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      })
+
+      if (!res.ok) {
+        clearToken()
+        return false
+      }
+
+      return true
+    } catch {
+      clearToken()
+      return false
+    }
+  },
 }
 
 
@@ -176,7 +204,17 @@ export interface CreateFunnelPayload {
   source: "ADMIN"
 }
 
+export interface FunnelSummary {
+  id: string
+  stage: string
+  ownerMemberId: string
+  channelId: string
+}
+
 export const FunnelAPI = {
+  list: () =>
+    api<FunnelSummary[]>("/internal/funnels"),
+
   create: (payload: CreateFunnelPayload) =>
     api("/internal/funnels", {
       method: "POST",
@@ -184,10 +222,6 @@ export const FunnelAPI = {
     }),
 
   getUi: (id: string) =>
-    api(`/internal/funnels/ui/${id}`),
+    api<FunnelUi>(`/internal/funnels/ui/${id}`),
 }
-
-
-
-
 

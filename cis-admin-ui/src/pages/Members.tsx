@@ -1,5 +1,6 @@
-import { useEffect, useState } from "react"
+import { useState } from "react"
 import { useParams } from "react-router-dom"
+import { useQuery } from "@tanstack/react-query"
 
 import { ChannelMemberAPI } from "../lib/api"
 import AddChannelMemberModal from "../components/AddChannelMemberModal"
@@ -17,6 +18,11 @@ interface Member {
   status: MemberStatus
 }
 
+function toErrorMessage(error: unknown): string {
+  if (error instanceof Error) return error.message
+  return "Something went wrong"
+}
+
 /* ---------- Page ---------- */
 
 export default function Members() {
@@ -26,21 +32,14 @@ export default function Members() {
     return <div className="text-red-400">Invalid channel</div>
   }
 
-  const [members, setMembers] = useState<Member[]>([])
-  const [loading, setLoading] = useState(true)
-  const [error, setError] = useState<string | null>(null)
   const [showModal, setShowModal] = useState(false)
 
-  /* ---------- Load members ---------- */
-  useEffect(() => {
-    setLoading(true)
-    setError(null)
+  const membersQuery = useQuery({
+    queryKey: ["channelMembers", channelId],
+    queryFn: () => ChannelMemberAPI.list(channelId),
+  })
 
-    ChannelMemberAPI.list(channelId)
-      .then(setMembers)
-      .catch((err) => setError(err.message))
-      .finally(() => setLoading(false))
-  }, [channelId])
+  const members = (membersQuery.data ?? []) as Member[]
 
   return (
     <div className="space-y-6">
@@ -55,15 +54,17 @@ export default function Members() {
         </button>
       </div>
 
-      {loading && (
+      {membersQuery.isLoading && (
         <div className="text-sm text-[var(--text-muted)]">Loading members…</div>
       )}
 
-      {error && (
-        <div className="text-sm text-red-400">{error}</div>
+      {membersQuery.error && (
+        <div className="text-sm text-red-400">
+          {toErrorMessage(membersQuery.error)}
+        </div>
       )}
 
-      {!loading && !error && (
+      {!membersQuery.isLoading && !membersQuery.error && (
         <div className="bg-[var(--bg-card)] border border-[var(--border)] rounded-lg">
           <table className="w-full text-sm">
             <thead className="border-b border-[var(--border)] text-[var(--text-muted)]">
