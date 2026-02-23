@@ -9,9 +9,15 @@ import {
 } from "react"
 import { AuthAPI } from "../lib/api"
 import {
-  clearToken,
+  clearAuthState,
+  getMemberships,
+  getSelectedChannelId,
+  getSelectedMembershipId,
+  getUserId,
   isLoggedIn,
   onAuthChange,
+  setPendingAuthSession,
+  setSelectedMembershipContext,
   setToken,
 } from "../lib/auth"
 import {
@@ -21,13 +27,23 @@ import {
 
 type AuthStatus =
   | "checking"
+  | "membership-selection"
   | "authenticated"
   | "unauthenticated"
 
 interface AuthContextValue {
   status: AuthStatus
   actor: DecodedActor | null
+  userId: string | null
+  memberships: {
+    membershipId: string
+    channelId: string
+  }[]
+  selectedMembershipId: string | null
+  selectedChannelId: string | null
+  permissions: string[]
   login: (email: string) => Promise<void>
+  selectMembership: (membershipId: string) => Promise<void>
   logout: () => void
   refreshSession: () => Promise<boolean>
 }
@@ -43,9 +59,39 @@ export function AuthProvider({
   const [actor, setActor] = useState<DecodedActor | null>(
     null
   )
+  const [userId, setUserId] = useState<string | null>(null)
+  const [memberships, setMemberships] = useState<
+    { membershipId: string; channelId: string }[]
+  >([])
+  const [selectedMembershipId, setSelectedMembershipId] =
+    useState<string | null>(null)
+  const [selectedChannelId, setSelectedChannelId] = useState<
+    string | null
+  >(null)
+  const [permissions, setPermissions] = useState<string[]>([])
 
   const refreshSession = useCallback(async () => {
     if (!isLoggedIn()) {
+      const pendingUserId = getUserId()
+      const pendingMemberships = getMemberships()
+
+      setUserId(pendingUserId)
+      setMemberships(pendingMemberships)
+      setActor(null)
+      setPermissions([])
+      setSelectedMembershipId(
+        getSelectedMembershipId() ?? null
+      )
+      setSelectedChannelId(getSelectedChannelId() ?? null)
+
+      if (
+        pendingUserId &&
+        pendingMemberships.length > 0
+      ) {
+        setStatus("membership-selection")
+        return false
+      }
+
       setActor(null)
       setStatus("unauthenticated")
       return false
@@ -53,12 +99,46 @@ export function AuthProvider({
 
     const sessionOk = await AuthAPI.validateSession()
     if (!sessionOk) {
+      clearAuthState()
       setActor(null)
+      setUserId(null)
+      setMemberships([])
+      setSelectedMembershipId(null)
+      setSelectedChannelId(null)
+      setPermissions([])
       setStatus("unauthenticated")
       return false
     }
 
-    setActor(getActorFromToken())
+    const nextActor = getActorFromToken()
+    setActor(nextActor)
+    setPermissions(nextActor?.permissionCodes ?? [])
+    setUserId(nextActor?.sub ?? getUserId())
+
+    const membershipId =
+      nextActor?.membershipId ??
+      getSelectedMembershipId() ??
+      null
+    const channelId =
+      nextActor?.channelId ?? getSelectedChannelId() ?? null
+
+    const storedMemberships = getMemberships()
+    const effectiveMemberships =
+      storedMemberships.length > 0
+        ? storedMemberships
+        : membershipId && channelId
+          ? [{ membershipId, channelId }]
+          : []
+    setMemberships(effectiveMemberships)
+    if (nextActor?.sub) {
+      setPendingAuthSession(
+        nextActor.sub,
+        effectiveMemberships
+      )
+    }
+
+    setSelectedMembershipId(membershipId)
+    setSelectedChannelId(channelId)
     setStatus("authenticated")
     return true
   }, [])
@@ -66,20 +146,62 @@ export function AuthProvider({
   const login = useCallback(
     async (email: string) => {
       const res = await AuthAPI.login(email.trim())
+      setPendingAuthSession(res.userId, res.memberships)
+      setUserId(res.userId)
+      setMemberships(res.memberships)
+      setSelectedMembershipId(null)
+      setSelectedChannelId(null)
+      setPermissions([])
+      setActor(null)
+      setStatus("membership-selection")
+    },
+    []
+  )
+
+  const selectMembership = useCallback(
+    async (membershipId: string) => {
+      if (!userId) {
+        throw new Error(
+          "Missing user session. Please login again."
+        )
+      }
+
+      const membership = memberships.find(
+        (m) => m.membershipId === membershipId
+      )
+      if (!membership) {
+        throw new Error("Invalid membership selection.")
+      }
+
+      const res = await AuthAPI.selectMembership(
+        userId,
+        membershipId
+      )
+
+      setSelectedMembershipContext(
+        membership.membershipId,
+        membership.channelId
+      )
       setToken(res.token)
+
       const ok = await refreshSession()
       if (!ok) {
         throw new Error(
-          "Login failed: session validation failed."
+          "Membership selection failed: session validation failed."
         )
       }
     },
-    [refreshSession]
+    [userId, memberships, refreshSession]
   )
 
   const logout = useCallback(() => {
-    clearToken()
+    clearAuthState()
     setActor(null)
+    setUserId(null)
+    setMemberships([])
+    setSelectedMembershipId(null)
+    setSelectedChannelId(null)
+    setPermissions([])
     setStatus("unauthenticated")
   }, [])
 
@@ -105,11 +227,29 @@ export function AuthProvider({
     () => ({
       status,
       actor,
+      userId,
+      memberships,
+      selectedMembershipId,
+      selectedChannelId,
+      permissions,
       login,
+      selectMembership,
       logout,
       refreshSession,
     }),
-    [status, actor, login, logout, refreshSession]
+    [
+      status,
+      actor,
+      userId,
+      memberships,
+      selectedMembershipId,
+      selectedChannelId,
+      permissions,
+      login,
+      selectMembership,
+      logout,
+      refreshSession,
+    ]
   )
 
   return (

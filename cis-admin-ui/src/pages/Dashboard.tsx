@@ -5,17 +5,6 @@ import { useAuth } from "../context/AuthContext"
 import type { DecodedActor } from "../lib/jwt"
 
 function PermissionPanel({ actor }: { actor: DecodedActor }) {
-  if (actor.type === "ADMIN") {
-    return (
-      <div className="bg-emerald-900/30 border border-emerald-800 rounded-lg p-4">
-        <h3 className="font-semibold text-emerald-400">Admin Access</h3>
-        <p className="text-sm text-zinc-300 mt-1">
-          You have full access to all system actions.
-        </p>
-      </div>
-    )
-  }
-
   return (
     <div className="bg-[var(--bg-card)] border border-[var(--border)] rounded-lg p-4">
       <h3 className="font-semibold mb-2">Your Permissions</h3>
@@ -44,7 +33,7 @@ function toErrorMessage(error: unknown): string {
 }
 
 export default function Dashboard() {
-  const { actor } = useAuth()
+  const { actor, selectedChannelId } = useAuth()
   const navigate = useNavigate()
 
   const funnelsQuery = useQuery({
@@ -72,7 +61,9 @@ export default function Dashboard() {
       </button>
 
       <div className="bg-[var(--bg-card)] border border-[var(--border)] rounded-lg p-4">
-        <h3 className="font-semibold mb-3">Recent Funnels</h3>
+        <h3 className="font-semibold mb-3">
+          Recent Funnels
+        </h3>
 
         {funnelsQuery.isLoading && (
           <p className="text-sm text-[var(--text-muted)]">Loading funnels...</p>
@@ -93,6 +84,9 @@ export default function Dashboard() {
                 <thead className="text-[var(--text-muted)]">
                   <tr>
                     <th className="text-left py-1">ID</th>
+                    <th className="text-left py-1">
+                      Channel
+                    </th>
                     <th className="text-left py-1">Stage</th>
                   </tr>
                 </thead>
@@ -104,6 +98,9 @@ export default function Dashboard() {
                       onClick={() => navigate(`/funnels/${f.id}`)}
                     >
                       <td className="py-1 font-mono text-xs">{f.id.slice(-6)}</td>
+                      <td className="py-1">
+                        {f.channelName ?? f.channelId}
+                      </td>
                       <td className="py-1">{f.stage}</td>
                     </tr>
                   ))}
@@ -114,9 +111,13 @@ export default function Dashboard() {
         )}
       </div>
 
-      <div className="grid grid-cols-3 gap-4">
-        <div className="bg-[var(--bg-card)] p-4 rounded">Channels: 1</div>
-        <div className="bg-[var(--bg-card)] p-4 rounded">Permission Sets: 2</div>
+      <div className="grid grid-cols-2 gap-4">
+        <div className="bg-[var(--bg-card)] p-4 rounded">
+          Active Channel: {selectedChannelId ?? "—"}
+        </div>
+        <div className="bg-[var(--bg-card)] p-4 rounded">
+          Visible Funnels: {funnels.length}
+        </div>
       </div>
     </div>
   )

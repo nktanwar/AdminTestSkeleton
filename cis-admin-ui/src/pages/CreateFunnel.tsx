@@ -1,11 +1,7 @@
 import { useEffect, useState } from "react"
 import { useNavigate } from "react-router-dom"
-import { FunnelAPI, ChannelAPI, ChannelMemberAPI } from "../lib/api"
-
-interface Channel {
-  id: string
-  name: string
-}
+import { FunnelAPI, ChannelMemberAPI } from "../lib/api"
+import { useAuth } from "../context/AuthContext"
 
 interface Member {
   id: string
@@ -14,11 +10,9 @@ interface Member {
 
 export default function CreateFunnel() {
   const navigate = useNavigate()
-
-  const [channels, setChannels] = useState<Channel[]>([])
+  const { selectedChannelId } = useAuth()
   const [members, setMembers] = useState<Member[]>([])
 
-  const [channelId, setChannelId] = useState("")
   const [ownerMemberId, setOwnerMemberId] = useState("")
 
   const [customerName, setCustomerName] = useState("")
@@ -28,24 +22,26 @@ export default function CreateFunnel() {
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
-  /* Load channels */
+  /* Load members for selected channel */
   useEffect(() => {
-    ChannelAPI.list().then(setChannels)
-  }, [])
-
-  /* Load members when channel changes */
-  useEffect(() => {
-    if (!channelId) return
-    ChannelMemberAPI.list(channelId).then(setMembers)
-  }, [channelId])
+    if (!selectedChannelId) return
+    ChannelMemberAPI.list(selectedChannelId).then(
+      setMembers
+    )
+  }, [selectedChannelId])
 
   async function submit() {
+    if (!selectedChannelId) {
+      setError("No active channel selected")
+      return
+    }
+
     setError(null)
     setLoading(true)
 
     try {
       await FunnelAPI.create({
-        channelId,
+        channelId: selectedChannelId,
         ownerMemberId,
         customerName,
         customerPhone,
@@ -89,16 +85,12 @@ export default function CreateFunnel() {
       {/* Assignment */}
       <div className="bg-zinc-900 border border-zinc-800 rounded-lg p-4 space-y-3">
         <h3 className="font-semibold text-sm">Assignment</h3>
-
-        <Select
-          label="Channel"
-          value={channelId}
-          onChange={setChannelId}
-          options={channels.map(c => ({
-            value: c.id,
-            label: c.name,
-          }))}
-        />
+        <div className="text-xs text-zinc-400 mb-1">
+          Channel
+        </div>
+        <div className="px-3 py-2 bg-zinc-800 rounded">
+          {selectedChannelId ?? "No active channel"}
+        </div>
 
         <Select
           label="Owner"

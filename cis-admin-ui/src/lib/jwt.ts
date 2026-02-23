@@ -2,10 +2,13 @@
 import { getToken } from "./auth"
 
 export interface DecodedActor {
-  type: "ADMIN" | "CHANNEL_MEMBER"
+  type: "CHANNEL_MEMBER"
   channelId?: string
+  membershipId?: string
   permissionCodes?: string[]
   sub: string
+  userTokenVersion?: number
+  membershipTokenVersion?: number
 }
 
 export function getActorFromToken(): DecodedActor | null {

@@ -1,10 +1,19 @@
 // src/lib/auth.ts
 
 const TOKEN_KEY = "cis_token"
+const USER_ID_KEY = "cis_user_id"
+const MEMBERSHIPS_KEY = "cis_memberships"
+const SELECTED_MEMBERSHIP_ID_KEY = "cis_selected_membership_id"
+const SELECTED_CHANNEL_ID_KEY = "cis_selected_channel_id"
 const AUTH_EVENT = "cis-auth-changed"
 
 interface JwtPayload {
   exp?: number
+}
+
+export interface AuthMembership {
+  membershipId: string
+  channelId: string
 }
 
 function decodePayload(token: string): JwtPayload | null {
@@ -35,6 +44,69 @@ export function getToken(): string | null {
 
 export function clearToken() {
   localStorage.removeItem(TOKEN_KEY)
+  window.dispatchEvent(new Event(AUTH_EVENT))
+}
+
+export function setPendingAuthSession(
+  userId: string,
+  memberships: AuthMembership[]
+) {
+  localStorage.setItem(USER_ID_KEY, userId)
+  localStorage.setItem(
+    MEMBERSHIPS_KEY,
+    JSON.stringify(memberships)
+  )
+  window.dispatchEvent(new Event(AUTH_EVENT))
+}
+
+export function getUserId(): string | null {
+  return localStorage.getItem(USER_ID_KEY)
+}
+
+export function getMemberships(): AuthMembership[] {
+  const raw = localStorage.getItem(MEMBERSHIPS_KEY)
+  if (!raw) return []
+  try {
+    const parsed = JSON.parse(raw)
+    if (!Array.isArray(parsed)) return []
+
+    return parsed.filter(
+      (x): x is AuthMembership =>
+        !!x &&
+        typeof x.membershipId === "string" &&
+        typeof x.channelId === "string"
+    )
+  } catch {
+    return []
+  }
+}
+
+export function setSelectedMembershipContext(
+  membershipId: string,
+  channelId: string
+) {
+  localStorage.setItem(
+    SELECTED_MEMBERSHIP_ID_KEY,
+    membershipId
+  )
+  localStorage.setItem(SELECTED_CHANNEL_ID_KEY, channelId)
+  window.dispatchEvent(new Event(AUTH_EVENT))
+}
+
+export function getSelectedMembershipId(): string | null {
+  return localStorage.getItem(SELECTED_MEMBERSHIP_ID_KEY)
+}
+
+export function getSelectedChannelId(): string | null {
+  return localStorage.getItem(SELECTED_CHANNEL_ID_KEY)
+}
+
+export function clearAuthState() {
+  localStorage.removeItem(TOKEN_KEY)
+  localStorage.removeItem(USER_ID_KEY)
+  localStorage.removeItem(MEMBERSHIPS_KEY)
+  localStorage.removeItem(SELECTED_MEMBERSHIP_ID_KEY)
+  localStorage.removeItem(SELECTED_CHANNEL_ID_KEY)
   window.dispatchEvent(new Event(AUTH_EVENT))
 }
 

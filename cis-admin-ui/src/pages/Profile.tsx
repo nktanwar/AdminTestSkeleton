@@ -1,17 +1,12 @@
-import { getToken } from "../lib/auth"
-
-function decode(token: string) {
-  try {
-    const payload = token.split(".")[1]
-    return JSON.parse(atob(payload))
-  } catch {
-    return null
-  }
-}
+import { useAuth } from "../context/AuthContext"
 
 export default function Profile() {
-  const token = getToken()
-  const actor = token ? decode(token) : null
+  const {
+    actor,
+    selectedChannelId,
+    selectedMembershipId,
+    permissions,
+  } = useAuth()
 
   return (
     <div className="max-w-3xl space-y-6">
@@ -41,13 +36,23 @@ export default function Profile() {
           </div>
           <div>
             <div className="text-xs text-[var(--text-muted)]">Channel</div>
-            <div className="text-sm">{actor?.channelId || "—"}</div>
+            <div className="text-sm">
+              {selectedChannelId || actor?.channelId || "—"}
+            </div>
+          </div>
+          <div>
+            <div className="text-xs text-[var(--text-muted)]">
+              Membership
+            </div>
+            <div className="text-sm font-mono">
+              {selectedMembershipId ||
+                actor?.membershipId ||
+                "—"}
+            </div>
           </div>
           <div>
             <div className="text-xs text-[var(--text-muted)]">Permissions</div>
-            <div className="text-sm">
-              {actor?.permissionCodes?.length || 0}
-            </div>
+            <div className="text-sm">{permissions.length}</div>
           </div>
         </div>
       </div>

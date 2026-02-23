@@ -1,7 +1,7 @@
 // src/lib/api.ts
 
 import type { Channel } from "../types/channel"
-import { clearToken, getToken } from "./auth"
+import { clearAuthState, getToken } from "./auth"
 
 const BASE_URL = "http://localhost:8082"
 
@@ -22,7 +22,10 @@ async function api<T>(
 
   if (!res.ok) {
     if (res.status === 401) {
-      clearToken()
+      clearAuthState()
+      if (window.location.pathname !== "/login") {
+        window.location.replace("/login")
+      }
     }
     const text = await res.text()
     throw new Error(text || "API error")
@@ -59,9 +62,27 @@ export const ChannelAPI = {
 
 export const AuthAPI = {
   login: (email: string) =>
-    api<{ token: string }>("/auth/login", {
+    api<{
+      userId: string
+      memberships: {
+        membershipId: string
+        channelId: string
+      }[]
+    }>("/auth/login", {
       method: "POST",
       body: JSON.stringify({ email }),
+    }),
+
+  selectMembership: (
+    userId: string,
+    membershipId: string
+  ) =>
+    api<{ token: string }>("/auth/select-membership", {
+      method: "POST",
+      body: JSON.stringify({
+        userId,
+        membershipId,
+      }),
     }),
 
   // Session check used at app bootstrap. If API is unreachable or auth is invalid,
@@ -78,13 +99,13 @@ export const AuthAPI = {
       })
 
       if (!res.ok) {
-        clearToken()
+        clearAuthState()
         return false
       }
 
       return true
     } catch {
-      clearToken()
+      clearAuthState()
       return false
     }
   },
@@ -150,20 +171,32 @@ export const PermissionAPI = {
   listPermissions: () =>
     api<string[]>("/api/permissions"),
 
-  listSets: () =>
-    api<PermissionSet[]>("/api/permissions/sets"),
+  listSets: (channelId: string) =>
+    api<PermissionSet[]>(
+      `/internal/channels/${channelId}/permission-sets`
+    ),
 
-  createSet: (name: string) =>
-    api<PermissionSet>("/api/permissions/sets", {
+  createSet: (channelId: string, name: string) =>
+    api<PermissionSet>(
+      `/internal/channels/${channelId}/permission-sets`,
+      {
       method: "POST",
       body: JSON.stringify({ name }),
-    }),
+      }
+    ),
 
-  updateSet: (id: string, permissions: string[]) =>
-    api<PermissionSet>(`/api/permissions/sets/${id}`, {
+  updateSet: (
+    channelId: string,
+    id: string,
+    permissions: string[]
+  ) =>
+    api<PermissionSet>(
+      `/internal/channels/${channelId}/permission-sets/${id}`,
+      {
       method: "PUT",
       body: JSON.stringify({ permissions }),
-    }),
+      }
+    ),
 }
 
 
@@ -209,11 +242,12 @@ export interface FunnelSummary {
   stage: string
   ownerMemberId: string
   channelId: string
+  channelName?: string
 }
 
 export const FunnelAPI = {
   list: () =>
-    api<FunnelSummary[]>("/internal/funnels"),
+    api<FunnelSummary[]>("/internal/funnels/ui"),
 
   create: (payload: CreateFunnelPayload) =>
     api("/internal/funnels", {
@@ -222,6 +256,5 @@ export const FunnelAPI = {
     }),
 
   getUi: (id: string) =>
-    api<FunnelUi>(`/internal/funnels/ui/${id}`),
+    api<FunnelUi>(`/internal/funnels/${id}/ui`),
 }
-

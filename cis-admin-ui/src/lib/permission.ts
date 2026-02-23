@@ -3,8 +3,9 @@ import { getActorFromToken } from "./jwt"
 
 export function usePermissions() {
   const actor = getActorFromToken()
-
-  const isAdmin = actor?.type === "ADMIN"
+  const isAdmin =
+    actor?.permissionCodes?.includes("ADMIN_OVERRIDE") ??
+    false
 
   function has(permission: string): boolean {
     if (!actor) return false

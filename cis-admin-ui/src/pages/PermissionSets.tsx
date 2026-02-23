@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from "react"
+import { useParams } from "react-router-dom"
 import {
   useMutation,
   useQuery,
@@ -6,6 +7,7 @@ import {
 } from "@tanstack/react-query"
 import { PermissionAPI, type PermissionSet } from "../lib/api"
 import CreatePermissionSetModal from "../components/CreatePermissionSetModal"
+import { useAuth } from "../context/AuthContext"
 
 function toErrorMessage(error: unknown): string {
   if (error instanceof Error) return error.message
@@ -14,6 +16,9 @@ function toErrorMessage(error: unknown): string {
 
 export default function PermissionSets() {
   const queryClient = useQueryClient()
+  const { channelId: routeChannelId } = useParams()
+  const { selectedChannelId } = useAuth()
+  const channelId = routeChannelId ?? selectedChannelId ?? null
 
   const [sets, setSets] = useState<PermissionSet[]>([])
   const [savedSets, setSavedSets] = useState<PermissionSet[]>([])
@@ -27,8 +32,9 @@ export default function PermissionSets() {
   })
 
   const setsQuery = useQuery({
-    queryKey: ["permissionSets"],
-    queryFn: PermissionAPI.listSets,
+    queryKey: ["permissionSets", channelId],
+    queryFn: () => PermissionAPI.listSets(channelId!),
+    enabled: !!channelId,
   })
 
   useEffect(() => {
@@ -45,10 +51,11 @@ export default function PermissionSets() {
   }, [setsQuery.data])
 
   const createSetMutation = useMutation({
-    mutationFn: (name: string) => PermissionAPI.createSet(name),
+    mutationFn: (name: string) =>
+      PermissionAPI.createSet(channelId!, name),
     onSuccess: (created) => {
       queryClient.setQueryData<PermissionSet[]>(
-        ["permissionSets"],
+        ["permissionSets", channelId],
         (prev) => [...(prev ?? []), created]
       )
 
@@ -66,10 +73,15 @@ export default function PermissionSets() {
     }: {
       id: string
       permissions: string[]
-    }) => PermissionAPI.updateSet(id, permissions),
+    }) =>
+      PermissionAPI.updateSet(
+        channelId!,
+        id,
+        permissions
+      ),
     onSuccess: (saved) => {
       queryClient.setQueryData<PermissionSet[]>(
-        ["permissionSets"],
+        ["permissionSets", channelId],
         (prev) =>
           (prev ?? []).map((s) =>
             s.id === saved.id ? saved : s
@@ -162,6 +174,14 @@ export default function PermissionSets() {
     permissionsQuery.isLoading || setsQuery.isLoading
   const baseError =
     permissionsQuery.error || setsQuery.error || null
+
+  if (!channelId) {
+    return (
+      <div className="text-[var(--text-muted)]">
+        Select a channel to manage permission sets.
+      </div>
+    )
+  }
 
   if (loading) return <div>Loading permission sets...</div>
   if (baseError) {
