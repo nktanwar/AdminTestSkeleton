@@ -1,9 +1,26 @@
-import { Outlet, useParams, NavLink } from "react-router-dom"
+import { useEffect } from "react"
+import {
+  Outlet,
+  useParams,
+  NavLink,
+} from "react-router-dom"
 import { useQuery } from "@tanstack/react-query"
 import { ChannelAPI } from "../lib/api"
+import { useAuth } from "../context/AuthContext"
 
 export default function ChannelLayout() {
   const { channelId } = useParams()
+  const {
+    capabilities,
+    selectedChannelId,
+    selectChannel,
+  } = useAuth()
+
+  useEffect(() => {
+    if (!channelId) return
+    if (selectedChannelId === channelId) return
+    selectChannel(channelId)
+  }, [channelId, selectedChannelId, selectChannel])
 
   const channelQuery = useQuery({
     queryKey: ["channel", channelId],
@@ -45,8 +62,12 @@ export default function ChannelLayout() {
       {/* Channel Navigation */}
       <div className="flex gap-4 border-b border-[var(--border)] pb-2">
         <ChannelTab to="">Dashboard</ChannelTab>
-        <ChannelTab to="members">Members</ChannelTab>
-        <ChannelTab to="permissions">Permission Sets</ChannelTab>
+        {capabilities.canViewMembers && (
+          <ChannelTab to="members">Members</ChannelTab>
+        )}
+        {capabilities.canUpdateChannel && (
+          <ChannelTab to="settings">Settings</ChannelTab>
+        )}
       </div>
 
       {/* Channel Page Content */}

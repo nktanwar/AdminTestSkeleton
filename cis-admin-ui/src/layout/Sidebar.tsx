@@ -1,14 +1,17 @@
 import { NavLink } from "react-router-dom"
-
-const links = [
-  { name: "Dashboard", to: "/" },
-  { name: "Channels", to: "/channels" },
-  // { name: "Members", to: "/members" },
-  { name: "Permission Sets", to: "/permissions" },
-  { name: "Demo Switch", to: "/demo" },
-]
+import { useAuth } from "../context/AuthContext"
 
 export default function Sidebar() {
+  const { capabilities } = useAuth()
+  const links = [
+    { name: "Dashboard", to: "/" },
+    { name: "Channels", to: "/channels" },
+    ...(capabilities.canManagePermissions
+      ? [{ name: "Permission Sets", to: "/permissions" }]
+      : []),
+    { name: "Demo Switch", to: "/demo" },
+  ]
+
   return (
     <aside className="w-64 bg-[var(--bg-panel)] border-r border-[var(--border)] p-5 shadow-[var(--shadow-panel)] flex flex-col">
       <div className="mb-6">

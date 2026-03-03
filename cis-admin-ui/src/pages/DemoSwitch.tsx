@@ -27,6 +27,9 @@ interface ChannelMember {
   email: string
 }
 
+const BASE_URL =
+  import.meta.env.VITE_API_BASE_URL ?? "http://localhost:8082"
+
 /* ---------------------------------------------
    JWT decode
 ---------------------------------------------- */
@@ -116,7 +119,7 @@ export default function DemoSwitch() {
       setBusy(true)
 
       const res = await fetch(
-        "http://localhost:8082/internal/funnels",
+        `${BASE_URL}/internal/channels/${activeChannel.id}/funnels`,
         {
           method: "POST",
           headers: {
@@ -124,9 +127,8 @@ export default function DemoSwitch() {
             Authorization: `Bearer ${getToken()}`,
           },
           body: JSON.stringify({
-            channelId: activeChannel.id,
             ownerMemberId: primaryMember.id,
-            source: "ADMIN",
+            source: "ONLINE",
             customerName: "Demo Customer",
             customerPhone: "9999999999",
             customerEmail: null,
@@ -152,7 +154,7 @@ export default function DemoSwitch() {
       setBusy(true)
 
       const res = await fetch(
-        "http://localhost:8082/internal/funnels",
+        `${BASE_URL}/internal/channels/${activeChannel.id}/funnels/ui`,
         {
           headers: {
             Authorization: `Bearer ${getToken()}`,
@@ -172,7 +174,7 @@ export default function DemoSwitch() {
       }
 
       const transferRes = await fetch(
-        `http://localhost:8082/internal/funnels/${funnels[0].id}/transfer?newOwnerMemberId=${secondaryMember.id}`,
+        `${BASE_URL}/internal/channels/${activeChannel.id}/funnels/${funnels[0].id}/transfer?newOwnerMemberId=${secondaryMember.id}`,
         {
           method: "POST",
           headers: {
@@ -199,7 +201,7 @@ export default function DemoSwitch() {
       setBusy(true)
 
       const res = await fetch(
-        "http://localhost:8082/internal/funnels",
+        `${BASE_URL}/internal/channels/${activeChannel.id}/funnels/ui`,
         {
           headers: {
             Authorization: `Bearer ${getToken()}`,
@@ -219,7 +221,7 @@ export default function DemoSwitch() {
       }
 
       const workRes = await fetch(
-        "http://localhost:8082/internal/work",
+        `${BASE_URL}/internal/work`,
         {
           method: "POST",
           headers: {
@@ -265,14 +267,14 @@ export default function DemoSwitch() {
 
         <ActionRow
           label="Create Funnel"
-          visible={has("FUNNEL_CREATE")}
+          visible={has("CREATE_FUNNEL")}
           disabled={busy}
           onClick={createFunnel}
         />
 
         <ActionRow
           label="Transfer Funnel"
-          visible={has("FUNNEL_TRANSFER")}
+          visible={has("TRANSFER_WORK")}
           disabled={busy}
           onClick={transferFunnel}
         />

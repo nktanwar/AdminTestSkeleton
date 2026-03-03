@@ -1,6 +1,10 @@
 import { useEffect, useState } from "react"
-import { useNavigate } from "react-router-dom"
-import { FunnelAPI, ChannelMemberAPI } from "../lib/api"
+import { useNavigate, useParams } from "react-router-dom"
+import {
+  ApiError,
+  FunnelAPI,
+  ChannelMemberAPI,
+} from "../lib/api"
 import { useAuth } from "../context/AuthContext"
 
 interface Member {
@@ -10,7 +14,13 @@ interface Member {
 
 export default function CreateFunnel() {
   const navigate = useNavigate()
-  const { selectedChannelId } = useAuth()
+  const { channelId: routeChannelId } = useParams()
+  const { selectedChannelId, isAdmin, permissions } = useAuth()
+  const channelId = routeChannelId ?? selectedChannelId ?? null
+  const canCreateFunnel =
+    isAdmin ||
+    permissions.includes("ADMIN_OVERRIDE") ||
+    permissions.includes("CREATE_FUNNEL")
   const [members, setMembers] = useState<Member[]>([])
 
   const [ownerMemberId, setOwnerMemberId] = useState("")
@@ -24,14 +34,21 @@ export default function CreateFunnel() {
 
   /* Load members for selected channel */
   useEffect(() => {
-    if (!selectedChannelId) return
-    ChannelMemberAPI.list(selectedChannelId).then(
-      setMembers
-    )
-  }, [selectedChannelId])
+    if (!channelId) return
+    ChannelMemberAPI.list(channelId)
+      .then(setMembers)
+      .catch(() => {
+        setMembers([])
+      })
+  }, [channelId])
 
   async function submit() {
-    if (!selectedChannelId) {
+    if (!canCreateFunnel) {
+      setError("Not authorized to create funnel")
+      return
+    }
+
+    if (!channelId) {
       setError("No active channel selected")
       return
     }
@@ -40,18 +57,21 @@ export default function CreateFunnel() {
     setLoading(true)
 
     try {
-      await FunnelAPI.create({
-        channelId: selectedChannelId,
+      await FunnelAPI.create(channelId, {
         ownerMemberId,
         customerName,
         customerPhone,
         customerEmail: customerEmail || null,
-        source: "ADMIN",
+        source: "ONLINE",
       })
 
       navigate("/") // back to dashboard
     } catch (e: any) {
-      setError(e.message)
+      if (e instanceof ApiError && e.status === 403) {
+        setError("Not authorized to create funnel")
+      } else {
+        setError(e.message)
+      }
     } finally {
       setLoading(false)
     }
@@ -68,6 +88,12 @@ export default function CreateFunnel() {
           ← Back
         </button>
       </div>
+
+      {!canCreateFunnel && (
+        <div className="text-sm text-red-400">
+          You do not have permission to create funnels in this channel.
+        </div>
+      )}
 
       {/* Customer */}
       <div className="bg-zinc-900 border border-zinc-800 rounded-lg p-4 space-y-3">
@@ -89,7 +115,7 @@ export default function CreateFunnel() {
           Channel
         </div>
         <div className="px-3 py-2 bg-zinc-800 rounded">
-          {selectedChannelId ?? "No active channel"}
+          {channelId ?? "No active channel"}
         </div>
 
         <Select
@@ -114,7 +140,7 @@ export default function CreateFunnel() {
         </button>
 
         <button
-          disabled={loading}
+          disabled={loading || !canCreateFunnel}
           onClick={submit}
           className="px-4 py-2 rounded bg-emerald-600 hover:bg-emerald-700 disabled:opacity-50"
         >

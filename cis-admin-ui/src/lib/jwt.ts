@@ -2,7 +2,9 @@
 import { getToken } from "./auth"
 
 export interface DecodedActor {
-  type: "CHANNEL_MEMBER"
+  type: "ADMIN" | "CHANNEL_MEMBER"
+  isAdmin?: boolean
+  globalRole?: "ADMIN" | "USER" | string
   channelId?: string
   membershipId?: string
   permissionCodes?: string[]

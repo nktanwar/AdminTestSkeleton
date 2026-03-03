@@ -13,7 +13,11 @@ interface JwtPayload {
 
 export interface AuthMembership {
   membershipId: string
-  channelId: string
+  channel: {
+    id: string
+    name?: string
+  }
+  role?: string
 }
 
 function decodePayload(token: string): JwtPayload | null {
@@ -70,12 +74,49 @@ export function getMemberships(): AuthMembership[] {
     const parsed = JSON.parse(raw)
     if (!Array.isArray(parsed)) return []
 
-    return parsed.filter(
-      (x): x is AuthMembership =>
-        !!x &&
-        typeof x.membershipId === "string" &&
-        typeof x.channelId === "string"
-    )
+    return parsed.flatMap((x): AuthMembership[] => {
+      if (!x || typeof x !== "object") return []
+      const membershipId = (x as { membershipId?: unknown })
+        .membershipId
+      const channel = (x as { channel?: unknown }).channel
+      const legacyChannelId = (x as { channelId?: unknown })
+        .channelId
+      const role = (x as { role?: unknown }).role
+
+      if (typeof membershipId !== "string") return []
+
+      if (
+        channel &&
+        typeof channel === "object" &&
+        typeof (channel as { id?: unknown }).id === "string"
+      ) {
+        const channelName = (channel as { name?: unknown }).name
+        return [
+          {
+            membershipId,
+            channel: {
+              id: (channel as { id: string }).id,
+              ...(typeof channelName === "string"
+                ? { name: channelName }
+                : {}),
+            },
+            ...(typeof role === "string" ? { role } : {}),
+          },
+        ]
+      }
+
+      if (typeof legacyChannelId === "string") {
+        return [
+          {
+            membershipId,
+            channel: { id: legacyChannelId },
+            ...(typeof role === "string" ? { role } : {}),
+          },
+        ]
+      }
+
+      return []
+    })
   } catch {
     return []
   }
@@ -89,6 +130,12 @@ export function setSelectedMembershipContext(
     SELECTED_MEMBERSHIP_ID_KEY,
     membershipId
   )
+  localStorage.setItem(SELECTED_CHANNEL_ID_KEY, channelId)
+  window.dispatchEvent(new Event(AUTH_EVENT))
+}
+
+export function setSelectedChannelContext(channelId: string) {
+  localStorage.removeItem(SELECTED_MEMBERSHIP_ID_KEY)
   localStorage.setItem(SELECTED_CHANNEL_ID_KEY, channelId)
   window.dispatchEvent(new Event(AUTH_EVENT))
 }

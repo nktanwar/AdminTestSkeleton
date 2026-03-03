@@ -1,15 +1,21 @@
 import { useQuery } from "@tanstack/react-query"
 import { useNavigate } from "react-router-dom"
-import { FunnelAPI, type FunnelSummary } from "../lib/api"
+import { ApiError, FunnelAPI, type FunnelSummary } from "../lib/api"
 import { useAuth } from "../context/AuthContext"
 import type { DecodedActor } from "../lib/jwt"
 
 function PermissionPanel({ actor }: { actor: DecodedActor }) {
+  const hasFullAccess =
+    actor.type === "ADMIN" ||
+    (actor.permissionCodes?.includes("ADMIN_OVERRIDE") ?? false)
+
   return (
     <div className="bg-[var(--bg-card)] border border-[var(--border)] rounded-lg p-4">
       <h3 className="font-semibold mb-2">Your Permissions</h3>
 
-      {actor.permissionCodes && actor.permissionCodes.length > 0 ? (
+      {hasFullAccess ? (
+        <p className="text-sm text-emerald-400 font-semibold">ALL</p>
+      ) : actor.permissionCodes && actor.permissionCodes.length > 0 ? (
         <div className="flex flex-wrap gap-2">
           {actor.permissionCodes.map((p) => (
             <span
@@ -28,17 +34,30 @@ function PermissionPanel({ actor }: { actor: DecodedActor }) {
 }
 
 function toErrorMessage(error: unknown): string {
+  if (error instanceof ApiError && error.status === 403) {
+    return "Not authorized to view funnels in this channel."
+  }
   if (error instanceof Error) return error.message
   return "Failed to load dashboard"
 }
 
 export default function Dashboard() {
-  const { actor, selectedChannelId } = useAuth()
+  const {
+    actor,
+    selectedChannelId,
+    isAdmin,
+    permissions,
+  } = useAuth()
   const navigate = useNavigate()
+  const canCreateFunnel =
+    isAdmin ||
+    permissions.includes("ADMIN_OVERRIDE") ||
+    permissions.includes("CREATE_FUNNEL")
 
   const funnelsQuery = useQuery({
-    queryKey: ["funnels", "summary"],
-    queryFn: FunnelAPI.list,
+    queryKey: ["funnels", "summary", selectedChannelId],
+    queryFn: () => FunnelAPI.list(selectedChannelId!),
+    enabled: !!selectedChannelId,
   })
 
   if (!actor) {
@@ -53,29 +72,45 @@ export default function Dashboard() {
 
       <PermissionPanel actor={actor} />
 
-      <button
-        onClick={() => navigate("/funnels/new")}
-        className="px-4 py-2 rounded bg-emerald-600 hover:bg-emerald-700"
-      >
-        + Create Funnel
-      </button>
+      {canCreateFunnel && (
+        <button
+          onClick={() =>
+            selectedChannelId &&
+            navigate(
+              `/channels/${selectedChannelId}/funnels/new`
+            )
+          }
+          disabled={!selectedChannelId}
+          className="px-4 py-2 rounded bg-emerald-600 hover:bg-emerald-700"
+        >
+          + Create Funnel
+        </button>
+      )}
 
       <div className="bg-[var(--bg-card)] border border-[var(--border)] rounded-lg p-4">
         <h3 className="font-semibold mb-3">
           Recent Funnels
         </h3>
 
-        {funnelsQuery.isLoading && (
+        {!selectedChannelId && (
+          <p className="text-sm text-[var(--text-muted)]">
+            Select a channel to view funnels.
+          </p>
+        )}
+
+        {selectedChannelId && funnelsQuery.isLoading && (
           <p className="text-sm text-[var(--text-muted)]">Loading funnels...</p>
         )}
 
-        {funnelsQuery.error && (
+        {selectedChannelId && funnelsQuery.error && (
           <p className="text-sm text-red-500">
             {toErrorMessage(funnelsQuery.error)}
           </p>
         )}
 
-        {!funnelsQuery.isLoading && !funnelsQuery.error && (
+        {selectedChannelId &&
+          !funnelsQuery.isLoading &&
+          !funnelsQuery.error && (
           <>
             {funnels.length === 0 ? (
               <p className="text-sm text-zinc-500">No funnels created yet</p>
@@ -95,7 +130,11 @@ export default function Dashboard() {
                     <tr
                       key={f.id}
                       className="border-t border-[var(--border)] cursor-pointer hover:bg-zinc-800"
-                      onClick={() => navigate(`/funnels/${f.id}`)}
+                      onClick={() =>
+                        navigate(
+                          `/channels/${selectedChannelId}/funnels/${f.id}`
+                        )
+                      }
                     >
                       <td className="py-1 font-mono text-xs">{f.id.slice(-6)}</td>
                       <td className="py-1">

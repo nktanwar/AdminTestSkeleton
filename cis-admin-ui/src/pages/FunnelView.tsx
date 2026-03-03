@@ -1,21 +1,24 @@
 import { useQuery } from "@tanstack/react-query"
 import { useParams, useNavigate } from "react-router-dom"
-import { FunnelAPI, type FunnelUi } from "../lib/api"
+import { ApiError, FunnelAPI, type FunnelUi } from "../lib/api"
 
 export default function FunnelView() {
-  const { id } = useParams<{ id: string }>()
+  const { channelId, id } = useParams<{
+    channelId: string
+    id: string
+  }>()
   const navigate = useNavigate()
 
   const funnelQuery = useQuery({
-    queryKey: ["funnel", id],
-    queryFn: () => FunnelAPI.getUi(id!),
-    enabled: !!id,
+    queryKey: ["funnel", channelId, id],
+    queryFn: () => FunnelAPI.getUi(channelId!, id!),
+    enabled: !!channelId && !!id,
   })
 
-  if (!id) {
+  if (!channelId || !id) {
     return (
       <div className="p-6 space-y-4">
-        <div className="text-red-500">Invalid funnel id</div>
+        <div className="text-red-500">Invalid channel or funnel id</div>
         <button
           onClick={() => navigate(-1)}
           className="text-sm text-[var(--text-muted)] hover:text-white"
@@ -38,9 +41,12 @@ export default function FunnelView() {
     return (
       <div className="p-6 space-y-4">
         <div className="text-red-500">
-          {funnelQuery.error instanceof Error
-            ? funnelQuery.error.message
-            : "Failed to load funnel"}
+          {funnelQuery.error instanceof ApiError &&
+          funnelQuery.error.status === 403
+            ? "Not authorized to view this funnel."
+            : funnelQuery.error instanceof Error
+              ? funnelQuery.error.message
+              : "Failed to load funnel"}
         </div>
         <button
           onClick={() => navigate(-1)}

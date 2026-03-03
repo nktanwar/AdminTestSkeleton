@@ -3,7 +3,76 @@
 import type { Channel } from "../types/channel"
 import { clearAuthState, getToken } from "./auth"
 
-const BASE_URL = "http://localhost:8082"
+const BASE_URL = import.meta.env.VITE_API_BASE_URL ?? ""
+
+export class ApiError extends Error {
+  readonly status: number
+  readonly rawBody: string
+
+  constructor(status: number, message: string, rawBody = "") {
+    super(message)
+    this.name = "ApiError"
+    this.status = status
+    this.rawBody = rawBody
+  }
+}
+
+function defaultErrorMessage(status: number): string {
+  if (status === 400) return "Invalid request."
+  if (status === 403) return "Not authorized."
+  if (status === 409) return "Request conflicts with current state."
+  return "API error"
+}
+
+function stripHtmlTags(value: string): string {
+  return value
+    .replace(/<style[\s\S]*?<\/style>/gi, " ")
+    .replace(/<script[\s\S]*?<\/script>/gi, " ")
+    .replace(/<[^>]+>/g, " ")
+    .replace(/&nbsp;/gi, " ")
+    .replace(/&amp;/gi, "&")
+    .replace(/\s+/g, " ")
+    .trim()
+}
+
+function parseErrorMessage(body: string): string | null {
+  if (!body) return null
+  try {
+    const parsed = JSON.parse(body) as {
+      message?: unknown
+      error?: unknown
+    }
+    if (typeof parsed.message === "string") return parsed.message
+    if (typeof parsed.error === "string") return parsed.error
+  } catch {
+    // Non-JSON response
+  }
+
+  const trimmed = body.trim()
+  const isHtml =
+    /^<!doctype html/i.test(trimmed) ||
+    /<html[\s>]/i.test(trimmed)
+  if (isHtml) {
+    const titleMatch = trimmed.match(
+      /<title>([^<]+)<\/title>/i
+    )
+    const h1Match = trimmed.match(/<h1>([^<]+)<\/h1>/i)
+    const candidate = titleMatch?.[1] ?? h1Match?.[1] ?? ""
+    const plain = stripHtmlTags(candidate || trimmed)
+    if (plain) {
+      const tomcatStatusMatch = plain.match(
+        /^HTTP Status\s+\d+\s+[–-]\s+(.+)$/i
+      )
+      if (tomcatStatusMatch?.[1]) {
+        return tomcatStatusMatch[1].trim()
+      }
+      return plain
+    }
+    return null
+  }
+
+  return trimmed || null
+}
 
 async function api<T>(
   path: string,
@@ -21,17 +90,40 @@ async function api<T>(
   })
 
   if (!res.ok) {
+    const text = await res.text()
     if (res.status === 401) {
       clearAuthState()
       if (window.location.pathname !== "/login") {
         window.location.replace("/login")
       }
     }
-    const text = await res.text()
-    throw new Error(text || "API error")
+    throw new ApiError(
+      res.status,
+      parseErrorMessage(text) ??
+        defaultErrorMessage(res.status),
+      text
+    )
   }
 
-  return res.json()
+  if (res.status === 204) {
+    return undefined as T
+  }
+
+  const contentType = res.headers.get("content-type") ?? ""
+  if (contentType.includes("application/json")) {
+    return res.json()
+  }
+
+  const text = await res.text()
+  if (!text) {
+    return undefined as T
+  }
+
+  try {
+    return JSON.parse(text) as T
+  } catch {
+    return text as T
+  }
 }
 
 
@@ -55,6 +147,23 @@ export const ChannelAPI = {
     get: (id: string) =>
   api<Channel>(`/internal/channels/${id}`),
 
+  me: (channelId: string) =>
+    api<ChannelMe>(`/internal/channels/${channelId}/me`),
+
+}
+
+export interface ChannelCapabilities {
+  canViewMembers: boolean
+  canAddMember: boolean
+  canManagePermissions: boolean
+  canUpdateChannel: boolean
+}
+
+export interface ChannelMe {
+  userId: string
+  channelId: string
+  isAdmin: boolean
+  capabilities: ChannelCapabilities
 }
 
 
@@ -64,10 +173,18 @@ export const AuthAPI = {
   login: (email: string) =>
     api<{
       userId: string
-      memberships: {
+      globalRole: string
+      token?: string | null
+      adminToken?: string | null
+      memberships?: {
         membershipId: string
-        channelId: string
-      }[]
+        role?: string
+        channel?: {
+          id: string
+          name: string
+        }
+        channelId?: string
+      }[] | null
     }>("/auth/login", {
       method: "POST",
       body: JSON.stringify({ email }),
@@ -118,28 +235,47 @@ export interface ChannelMember {
   id: string
   name: string
   email: string
-  level: string
+  userId: string | null
   permissionSet: string
   status: "ACTIVE" | "DEACTIVATED"
 }
 
+export interface AddChannelMemberPayload {
+  userId: string | null
+  permissionSetId: string
+  externalName: string | null
+  externalEmail: string | null
+  externalPhone: string | null
+}
+
 export const ChannelMemberAPI = {
   list: (channelId: string) =>
-    api<ChannelMember[]>(`/api/channels/${channelId}/members`),
+    api<ChannelMember[]>(`/internal/channels/${channelId}/members`),
 
-  add: (
+  addMember: (
     channelId: string,
-    payload: {
-      name: string
-      email: string
-      phone: string
-      levelId: string
-    }
+    payload: AddChannelMemberPayload
   ) =>
-    api<ChannelMember>(`/api/channels/${channelId}/members`, {
-      method: "POST",
-      body: JSON.stringify(payload),
-    }),
+    api<ChannelMember>(
+      `/internal/channels/${channelId}/members/addMember`,
+      {
+        method: "POST",
+        body: JSON.stringify(payload),
+      }
+    ),
+
+  assignPermissionSet: (
+    channelId: string,
+    memberId: string,
+    permissionSetId: string
+  ) =>
+    api<void>(
+      `/internal/channels/${channelId}/members/${memberId}/permission-set`,
+      {
+        method: "PUT",
+        body: JSON.stringify({ permissionSetId }),
+      }
+    ),
 }
 
 
@@ -167,9 +303,27 @@ export interface PermissionSet {
   permissions: string[]
 }
 
+function permissionToCode(value: unknown): string {
+  if (typeof value === "string") return value
+  if (
+    value &&
+    typeof value === "object" &&
+    "code" in value &&
+    typeof (value as { code?: unknown }).code === "string"
+  ) {
+    return (value as { code: string }).code
+  }
+  return String(value)
+}
+
 export const PermissionAPI = {
-  listPermissions: () =>
-    api<string[]>("/api/permissions"),
+  listPermissions: async () => {
+    const raw = await api<unknown[]>("/internal/permissions/atoms")
+    const normalized = (raw ?? []).map(permissionToCode)
+    console.log("[PermissionAPI] atoms raw:", raw)
+    console.log("[PermissionAPI] atoms normalized:", normalized)
+    return [...new Set(normalized)]
+  },
 
   listSets: (channelId: string) =>
     api<PermissionSet[]>(
@@ -177,11 +331,11 @@ export const PermissionAPI = {
     ),
 
   createSet: (channelId: string, name: string) =>
-    api<PermissionSet>(
+    api<void>(
       `/internal/channels/${channelId}/permission-sets`,
       {
-      method: "POST",
-      body: JSON.stringify({ name }),
+        method: "POST",
+        body: JSON.stringify({ name }),
       }
     ),
 
@@ -190,11 +344,19 @@ export const PermissionAPI = {
     id: string,
     permissions: string[]
   ) =>
-    api<PermissionSet>(
+    api<void>(
       `/internal/channels/${channelId}/permission-sets/${id}`,
       {
-      method: "PUT",
-      body: JSON.stringify({ permissions }),
+        method: "PUT",
+        body: JSON.stringify({ permissions }),
+      }
+    ),
+
+  deleteSet: (channelId: string, id: string) =>
+    api<void>(
+      `/internal/channels/${channelId}/permission-sets/${id}`,
+      {
+        method: "DELETE",
       }
     ),
 }
@@ -229,12 +391,11 @@ export interface FunnelUi {
 /* -------- Funnels (UI) -------- */
 
 export interface CreateFunnelPayload {
-  channelId: string
   ownerMemberId: string
   customerName: string
   customerPhone: string
   customerEmail?: string | null
-  source: "ADMIN"
+  source: string
 }
 
 export interface FunnelSummary {
@@ -246,15 +407,22 @@ export interface FunnelSummary {
 }
 
 export const FunnelAPI = {
-  list: () =>
-    api<FunnelSummary[]>("/internal/funnels/ui"),
+  list: (channelId: string) =>
+    api<FunnelSummary[]>(
+      `/internal/channels/${channelId}/funnels/ui`
+    ),
 
-  create: (payload: CreateFunnelPayload) =>
-    api("/internal/funnels", {
+  create: (
+    channelId: string,
+    payload: CreateFunnelPayload
+  ) =>
+    api(`/internal/channels/${channelId}/funnels`, {
       method: "POST",
       body: JSON.stringify(payload),
     }),
 
-  getUi: (id: string) =>
-    api<FunnelUi>(`/internal/funnels/${id}/ui`),
+  getUi: (channelId: string, id: string) =>
+    api<FunnelUi>(
+      `/internal/channels/${channelId}/funnels/${id}/ui`
+    ),
 }

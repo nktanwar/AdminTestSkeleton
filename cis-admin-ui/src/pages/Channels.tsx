@@ -8,6 +8,7 @@ import type { Channel } from "../types/channel"
 import { ChannelAPI } from "../lib/api"
 import CreateChannelModal from "../components/CreateChannelModal"
 import { useNavigate } from "react-router-dom"
+import { useAuth } from "../context/AuthContext"
 
 function toErrorMessage(error: unknown): string {
   if (error instanceof Error) return error.message
@@ -17,6 +18,7 @@ function toErrorMessage(error: unknown): string {
 export default function Channels() {
   const queryClient = useQueryClient()
   const navigate = useNavigate()
+  const { isAdmin, selectChannel } = useAuth()
   const [showCreate, setShowCreate] = useState(false)
 
   const channelsQuery = useQuery({
@@ -87,13 +89,15 @@ export default function Channels() {
     <div className="space-y-6">
       <div className="flex justify-between items-center">
         <h1 className="text-2xl font-semibold">Channels</h1>
-        <button
-          onClick={() => setShowCreate(true)}
-          disabled={createChannelMutation.isPending}
-          className="px-4 py-2 rounded bg-emerald-600 hover:bg-emerald-700"
-        >
-          + Create Channel
-        </button>
+        {isAdmin && (
+          <button
+            onClick={() => setShowCreate(true)}
+            disabled={createChannelMutation.isPending}
+            className="px-4 py-2 rounded bg-emerald-600 hover:bg-emerald-700"
+          >
+            + Create Channel
+          </button>
+        )}
       </div>
 
       <div className="bg-[var(--bg-card)] border border-[var(--border)] rounded-lg overflow-hidden">
@@ -130,9 +134,10 @@ export default function Channels() {
                 <td className="px-4 py-2 text-right space-x-2">
                   {/* PRIMARY */}
                   <button
-                    onClick={() =>
+                    onClick={() => {
+                      selectChannel(c.id)
                       navigate(`/channels/${c.id}`)
-                    }
+                    }}
                     className="px-3 py-1 rounded bg-emerald-600 hover:bg-emerald-700 text-xs font-medium"
                   >
                     View
@@ -161,7 +166,7 @@ export default function Channels() {
         </table>
       </div>
 
-      {showCreate && (
+      {showCreate && isAdmin && (
         <CreateChannelModal
           onClose={() => setShowCreate(false)}
           onCreate={createChannel}

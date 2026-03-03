@@ -18,6 +18,7 @@ import FunnelView from "./pages/FunnelView"
 import ChannelLayout from "./layout/ChannelLayout"
 import CreateFunnel from "./pages/CreateFunnel"
 import Profile from "./pages/Profile"
+import ChannelSettings from "./pages/ChannelSettings"
 import {
   AuthProvider,
   useAuth,
@@ -68,9 +69,12 @@ export default function App() {
               />
               <Route path="/demo" element={<DemoSwitch />} />
               <Route path="/profile" element={<Profile />} />
-              <Route path="/funnels/:id" element={<FunnelView />} />
               <Route
-                path="/funnels/new"
+                path="/channels/:channelId/funnels/:id"
+                element={<FunnelView />}
+              />
+              <Route
+                path="/channels/:channelId/funnels/new"
                 element={<CreateFunnel />}
               />
 
@@ -85,8 +89,8 @@ export default function App() {
                   element={<Members />}
                 />
                 <Route
-                  path="permissions"
-                  element={<PermissionSets />}
+                  path="settings"
+                  element={<ChannelSettings />}
                 />
               </Route>
             </Route>

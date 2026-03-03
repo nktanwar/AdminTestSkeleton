@@ -1,6 +1,10 @@
-import { useState } from "react"
+import { useQueryClient } from "@tanstack/react-query"
+import { useEffect, useState } from "react"
+import { useNavigate } from "react-router-dom"
 import { getTheme, setTheme } from "../lib/theme"
 import { useAuth } from "../context/AuthContext"
+import { ChannelAPI } from "../lib/api"
+import type { Channel } from "../types/channel"
 
 export default function Topbar() {
   const [theme, setLocalTheme] = useState(getTheme())
@@ -9,15 +13,92 @@ export default function Topbar() {
     selectedMembershipId,
     selectedChannelId,
     selectMembership,
+    selectChannel,
+    globalRole,
     logout,
     status,
   } = useAuth()
+  const queryClient = useQueryClient()
+  const navigate = useNavigate()
+  const [channelsById, setChannelsById] = useState<
+    Record<string, string>
+  >({})
+  const [channels, setChannels] = useState<Channel[]>([])
 
   function toggleTheme() {
     const next = theme === "dark" ? "light" : "dark"
     setTheme(next)
     setLocalTheme(next)
   }
+
+  useEffect(() => {
+    if (status !== "authenticated") return
+    ChannelAPI.list()
+      .then((channels) => {
+        const map: Record<string, string> = {}
+        channels.forEach((c: Channel) => {
+          map[c.id] = c.name
+        })
+        setChannels(channels)
+        setChannelsById(map)
+      })
+      .catch(() => {
+        // Fallback to channel ids in UI.
+      })
+  }, [status])
+
+  useEffect(() => {
+    if (
+      status !== "authenticated" ||
+      globalRole !== "ADMIN" ||
+      selectedChannelId ||
+      channels.length === 0
+    ) {
+      return
+    }
+
+    selectChannel(channels[0].id)
+  }, [
+    status,
+    globalRole,
+    selectedChannelId,
+    channels,
+    selectChannel,
+  ])
+
+  async function switchContext(value: string) {
+    if (!value) return
+
+    if (globalRole === "ADMIN") {
+      selectChannel(value)
+    } else {
+      await selectMembership(value)
+    }
+
+    await queryClient.cancelQueries()
+    queryClient.removeQueries({
+      queryKey: ["funnels"],
+    })
+    queryClient.removeQueries({
+      queryKey: ["funnel"],
+    })
+    queryClient.removeQueries({
+      queryKey: ["channelMembers"],
+    })
+    queryClient.removeQueries({
+      queryKey: ["permissionSets"],
+    })
+
+    navigate("/", { replace: true })
+  }
+
+  const canSwitchContext =
+    status === "authenticated" &&
+    (globalRole === "ADMIN" || memberships.length > 1)
+  const switcherValue =
+    globalRole === "ADMIN"
+      ? selectedChannelId ?? ""
+      : selectedMembershipId ?? ""
 
   return (
     <header className="h-14 border-b border-[var(--border)] px-6 flex items-center justify-between bg-[var(--bg-panel)] shadow-[var(--shadow-panel)]">
@@ -31,27 +112,35 @@ export default function Topbar() {
       </div>
 
       <div className="flex items-center gap-3">
-        {status === "authenticated" &&
-          memberships.length > 1 && (
+        {canSwitchContext && (
             <select
-              value={selectedMembershipId ?? ""}
+              value={switcherValue}
               onChange={(e) => {
                 void (async () => {
-                  await selectMembership(e.target.value)
-                  window.location.replace("/")
+                  await switchContext(e.target.value)
                 })()
               }}
               className="px-2 py-1.5 rounded-lg border border-[var(--border)] bg-[var(--bg-card)] text-xs"
               title="Switch channel"
             >
-              {memberships.map((m) => (
-                <option
-                  key={m.membershipId}
-                  value={m.membershipId}
-                >
-                  {m.channelId}
-                </option>
-              ))}
+              <option value="">Select channel</option>
+              {globalRole === "ADMIN"
+                ? channels.map((channel) => (
+                    <option
+                      key={channel.id}
+                      value={channel.id}
+                    >
+                      {channel.name}
+                    </option>
+                  ))
+                : memberships.map((m) => (
+                    <option
+                      key={m.membershipId}
+                      value={m.membershipId}
+                    >
+                      {m.channel.name ?? m.channel.id}
+                    </option>
+                  ))}
             </select>
           )}
 
@@ -64,7 +153,8 @@ export default function Topbar() {
 
         {selectedChannelId && (
           <span className="text-xs bg-[var(--accent-soft)] text-[var(--accent)] px-3 py-1 rounded-full">
-            {selectedChannelId}
+            {channelsById[selectedChannelId] ??
+              selectedChannelId}
           </span>
         )}
 

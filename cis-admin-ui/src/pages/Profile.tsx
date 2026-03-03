@@ -7,6 +7,12 @@ export default function Profile() {
     selectedMembershipId,
     permissions,
   } = useAuth()
+  const hasFullAccess =
+    actor?.type === "ADMIN" ||
+    permissions.includes("ADMIN_OVERRIDE")
+  const permissionSummary = hasFullAccess
+    ? "All"
+    : String(permissions.length)
 
   return (
     <div className="max-w-3xl space-y-6">
@@ -52,7 +58,7 @@ export default function Profile() {
           </div>
           <div>
             <div className="text-xs text-[var(--text-muted)]">Permissions</div>
-            <div className="text-sm">{permissions.length}</div>
+            <div className="text-sm">{permissionSummary}</div>
           </div>
         </div>
       </div>
