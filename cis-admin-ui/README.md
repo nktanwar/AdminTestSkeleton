@@ -33,6 +33,9 @@
 
 ### Next Session TODO
 
+ - 1 Have to fix the update permission next and then will 
+ - 2 Funnel ui , 
+
 - Add query key constants per domain (`channels`, `members`, `permissions`, `funnels`)
 - Move API + hooks into feature folders for cleaner module boundaries
 - Replace remaining direct `alert/confirm` with reusable UI feedback components
