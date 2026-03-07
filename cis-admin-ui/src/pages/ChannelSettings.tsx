@@ -1,4 +1,4 @@
-import { useState } from "react"
+import { useEffect, useState } from "react"
 import {
   useMutation,
   useQuery,
@@ -42,6 +42,9 @@ export default function ChannelSettings() {
   const [overridesByMemberId, setOverridesByMemberId] = useState<
     Record<string, string>
   >({})
+  const [successToast, setSuccessToast] = useState<
+    string | null
+  >(null)
 
   const membersQuery = useQuery({
     queryKey: ["channelMembers", channelId],
@@ -77,6 +80,9 @@ export default function ChannelSettings() {
         delete next[variables.memberId]
         return next
       })
+      setSuccessToast(
+        "Member permissions updated successfully"
+      )
       await queryClient.invalidateQueries({
         queryKey: ["channelMembers", channelId],
       })
@@ -85,6 +91,16 @@ export default function ChannelSettings() {
 
   const members = membersQuery.data ?? []
   const permissionSets = permissionSetsQuery.data ?? []
+
+  useEffect(() => {
+    if (!successToast) return
+    const timeout = window.setTimeout(() => {
+      setSuccessToast(null)
+    }, 3000)
+    return () => {
+      window.clearTimeout(timeout)
+    }
+  }, [successToast])
 
   if (!channelId) {
     return <div className="text-red-500">Invalid channel</div>
@@ -151,6 +167,16 @@ export default function ChannelSettings() {
 
   return (
     <div className="space-y-6">
+      {successToast && (
+        <div
+          role="status"
+          aria-live="polite"
+          className="fixed top-4 right-4 z-50 rounded-md border border-emerald-700 bg-emerald-900/95 px-4 py-2 text-sm text-emerald-100 shadow-lg"
+        >
+          {successToast}
+        </div>
+      )}
+
       <div>
         <h1 className="text-2xl font-semibold">Settings</h1>
         <p className="text-sm text-[var(--text-muted)] mt-1">

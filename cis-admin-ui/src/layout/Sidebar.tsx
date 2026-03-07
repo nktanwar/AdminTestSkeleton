@@ -9,7 +9,6 @@ export default function Sidebar() {
     ...(capabilities.canManagePermissions
       ? [{ name: "Permission Sets", to: "/permissions" }]
       : []),
-    { name: "Demo Switch", to: "/demo" },
   ]
 
   return (

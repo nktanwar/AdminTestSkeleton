@@ -65,7 +65,7 @@ export default function CreateFunnel() {
         source: "ONLINE",
       })
 
-      navigate("/") // back to dashboard
+      navigate(`/channels/${channelId}/funnels`)
     } catch (e: any) {
       if (e instanceof ApiError && e.status === 403) {
         setError("Not authorized to create funnel")

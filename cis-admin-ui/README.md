@@ -33,8 +33,7 @@
 
 ### Next Session TODO
 
- - 1 Have to fix the update permission next and then will 
- - 2 Funnel ui , 
+ - 1 Funnel ui  + permission based ui and other things, 
 
 - Add query key constants per domain (`channels`, `members`, `permissions`, `funnels`)
 - Move API + hooks into feature folders for cleaner module boundaries

@@ -11,10 +11,10 @@ import Dashboard from "./pages/Dashboard"
 import Channels from "./pages/Channels"
 import Members from "./pages/Members"
 import PermissionSets from "./pages/PermissionSets"
-import DemoSwitch from "./pages/DemoSwitch"
 import Login from "./pages/Login"
 import ChannelView from "./pages/ChannelView"
 import FunnelView from "./pages/FunnelView"
+import ChannelFunnels from "./pages/ChannelFunnels"
 import ChannelLayout from "./layout/ChannelLayout"
 import CreateFunnel from "./pages/CreateFunnel"
 import Profile from "./pages/Profile"
@@ -67,16 +67,7 @@ export default function App() {
                 path="/permissions"
                 element={<PermissionSets />}
               />
-              <Route path="/demo" element={<DemoSwitch />} />
               <Route path="/profile" element={<Profile />} />
-              <Route
-                path="/channels/:channelId/funnels/:id"
-                element={<FunnelView />}
-              />
-              <Route
-                path="/channels/:channelId/funnels/new"
-                element={<CreateFunnel />}
-              />
 
               {/* Channel scoped */}
               <Route
@@ -84,6 +75,18 @@ export default function App() {
                 element={<ChannelLayout />}
               >
                 <Route index element={<ChannelView />} />
+                <Route
+                  path="funnels"
+                  element={<ChannelFunnels />}
+                />
+                <Route
+                  path="funnels/new"
+                  element={<CreateFunnel />}
+                />
+                <Route
+                  path="funnels/:id"
+                  element={<FunnelView />}
+                />
                 <Route
                   path="members"
                   element={<Members />}

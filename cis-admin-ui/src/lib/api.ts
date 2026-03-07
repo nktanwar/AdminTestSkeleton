@@ -270,10 +270,13 @@ export const ChannelMemberAPI = {
     permissionSetId: string
   ) =>
     api<void>(
-      `/internal/channels/${channelId}/members/${memberId}/permission-set`,
+      `/internal/channels/${channelId}/members/updatePermissionSet`,
       {
-        method: "PUT",
-        body: JSON.stringify({ permissionSetId }),
+        method: "POST",
+        body: JSON.stringify({
+          memberId,
+          permissionSetId,
+        }),
       }
     ),
 }
