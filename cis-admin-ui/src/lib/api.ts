@@ -426,3 +426,83 @@ export const FunnelAPI = {
       `/internal/channels/${channelId}/funnels/${id}/ui`
     ),
 }
+
+
+/* -------- Leads -------- */
+
+import type { Lead, ContactRecord, DashboardMetrics, WorkerMetrics, DealerLeaderboardEntry, SalesPersonLeaderboardEntry } from "../types/lead"
+
+export const LeadAPI = {
+  getByFunnelId: (channelId: string, funnelId: string) =>
+    api<Lead[]>(
+      `/internal/channels/${channelId}/funnels/${funnelId}/leads`
+    ),
+
+  getDetail: (channelId: string, funnelId: string, leadId: string) =>
+    api<Lead>(
+      `/internal/channels/${channelId}/funnels/${funnelId}/leads/${leadId}`
+    ),
+
+  updateStage: (
+    channelId: string,
+    funnelId: string,
+    leadId: string,
+    newStage: string
+  ) =>
+    api<Lead>(
+      `/internal/channels/${channelId}/funnels/${funnelId}/leads/${leadId}/stage`,
+      {
+        method: "PUT",
+        body: JSON.stringify({ stage: newStage }),
+      }
+    ),
+
+  addContactNote: (
+    channelId: string,
+    funnelId: string,
+    leadId: string,
+    payload: {
+      method: "CALL" | "EMAIL" | "MEETING" | "OTHER"
+      response: "POSITIVE" | "NEGATIVE" | "NO_RESPONSE" | "PENDING"
+      notes?: string
+    }
+  ) =>
+    api<ContactRecord>(
+      `/internal/channels/${channelId}/funnels/${funnelId}/leads/${leadId}/contact`,
+      {
+        method: "POST",
+        body: JSON.stringify(payload),
+      }
+    ),
+}
+
+
+/* -------- Dashboard Metrics -------- */
+
+export const DashboardMetricsAPI = {
+  getAdminMetrics: (channelId?: string) =>
+    api<DashboardMetrics>(
+      channelId
+        ? `/internal/channels/${channelId}/metrics/admin`
+        : `/internal/metrics/admin`
+    ),
+
+  getWorkerMetrics: (workerId: string) =>
+    api<WorkerMetrics>(
+      `/internal/users/${workerId}/metrics/worker`
+    ),
+
+  getDealerLeaderboard: (channelId?: string) =>
+    api<DealerLeaderboardEntry[]>(
+      channelId
+        ? `/internal/channels/${channelId}/metrics/dealers`
+        : `/internal/metrics/dealers`
+    ),
+
+  getSalesLeaderboard: (channelId?: string) =>
+    api<SalesPersonLeaderboardEntry[]>(
+      channelId
+        ? `/internal/channels/${channelId}/metrics/sales`
+        : `/internal/metrics/sales`
+    ),
+}

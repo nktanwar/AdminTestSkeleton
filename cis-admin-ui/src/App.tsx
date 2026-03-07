@@ -19,6 +19,8 @@ import ChannelLayout from "./layout/ChannelLayout"
 import CreateFunnel from "./pages/CreateFunnel"
 import Profile from "./pages/Profile"
 import ChannelSettings from "./pages/ChannelSettings"
+import FunnelList from "./pages/FunnelList"
+import LeadDetail from "./pages/LeadDetail"
 import {
   AuthProvider,
   useAuth,
@@ -70,12 +72,16 @@ export default function App() {
               <Route path="/demo" element={<DemoSwitch />} />
               <Route path="/profile" element={<Profile />} />
               <Route
+                path="/channels/:channelId/funnels/new"
+                element={<CreateFunnel />}
+              />
+              <Route
                 path="/channels/:channelId/funnels/:id"
                 element={<FunnelView />}
               />
               <Route
-                path="/channels/:channelId/funnels/new"
-                element={<CreateFunnel />}
+                path="/channels/:channelId/funnels/:id/leads/:leadId"
+                element={<LeadDetail />}
               />
 
               {/* Channel scoped */}
@@ -84,6 +90,10 @@ export default function App() {
                 element={<ChannelLayout />}
               >
                 <Route index element={<ChannelView />} />
+                <Route
+                  path="funnels"
+                  element={<FunnelList />}
+                />
                 <Route
                   path="members"
                   element={<Members />}

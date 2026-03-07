@@ -62,6 +62,7 @@ export default function ChannelLayout() {
       {/* Channel Navigation */}
       <div className="flex gap-4 border-b border-[var(--border)] pb-2">
         <ChannelTab to="">Dashboard</ChannelTab>
+        <ChannelTab to="funnels">Funnels</ChannelTab>
         {capabilities.canViewMembers && (
           <ChannelTab to="members">Members</ChannelTab>
         )}
