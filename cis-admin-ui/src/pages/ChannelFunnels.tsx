@@ -3,7 +3,7 @@ import { useNavigate, useParams } from "react-router-dom"
 import {
   ApiError,
   FunnelAPI,
-  type FunnelSummary,
+  type FunnelDefinition,
 } from "../lib/api"
 import { useAuth } from "../context/AuthContext"
 
@@ -16,23 +16,11 @@ function toErrorMessage(error: unknown): string {
   return "Failed to load funnels"
 }
 
-function stageClass(stage: string): string {
-  const normalized = stage.toUpperCase()
+function formatDate(value: string): string {
+  const timestamp = Date.parse(value)
+  if (Number.isNaN(timestamp)) return value
 
-  if (normalized.includes("NEW")) {
-    return "bg-sky-500/20 text-sky-300"
-  }
-  if (normalized.includes("WON")) {
-    return "bg-emerald-500/20 text-emerald-300"
-  }
-  if (
-    normalized.includes("LOST") ||
-    normalized.includes("CLOSED")
-  ) {
-    return "bg-rose-500/20 text-rose-300"
-  }
-
-  return "bg-[var(--accent-soft)] text-[var(--accent)]"
+  return new Date(timestamp).toLocaleString()
 }
 
 export default function ChannelFunnels() {
@@ -60,7 +48,7 @@ export default function ChannelFunnels() {
     )
   }
 
-  const funnels: FunnelSummary[] = funnelsQuery.data ?? []
+  const funnels: FunnelDefinition[] = funnelsQuery.data ?? []
 
   return (
     <div className="space-y-6">
@@ -131,8 +119,8 @@ export default function ChannelFunnels() {
             <thead className="text-[var(--text-muted)]">
               <tr>
                 <th className="text-left px-4 py-3">Funnel</th>
-                <th className="text-left px-4 py-3">Stage</th>
-                <th className="text-left px-4 py-3">Owner</th>
+                <th className="text-left px-4 py-3">Created At</th>
+                <th className="text-left px-4 py-3">Created By</th>
               </tr>
             </thead>
             <tbody>
@@ -148,23 +136,17 @@ export default function ChannelFunnels() {
                 >
                   <td className="px-4 py-3">
                     <div className="font-medium">
-                      Funnel {funnel.id.slice(-6)}
+                      {funnel.name}
                     </div>
                     <div className="text-xs text-[var(--text-muted)] font-mono">
                       {funnel.id}
                     </div>
                   </td>
                   <td className="px-4 py-3">
-                    <span
-                      className={`inline-flex px-2 py-1 rounded text-xs ${stageClass(
-                        funnel.stage
-                      )}`}
-                    >
-                      {funnel.stage}
-                    </span>
+                    {formatDate(funnel.createdAt)}
                   </td>
                   <td className="px-4 py-3 font-mono text-xs">
-                    {funnel.ownerMemberId}
+                    {funnel.createdBy}
                   </td>
                 </tr>
               ))}

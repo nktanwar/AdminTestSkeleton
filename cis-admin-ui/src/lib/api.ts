@@ -365,67 +365,39 @@ export const PermissionAPI = {
 }
 
 
-/* -------- Funnels (UI) -------- */
-
-export interface FunnelUi {
-  id: string
-  stage: string
-
-  channelId: string
-  channelName: string
-
-  ownerMemberId: string
-  ownerName: string
-
-  customerName: string
-  customerPhone: string
-  customerEmail?: string | null
-}
-
-// export const FunnelAPI = {
-//   listUi: () =>
-//     api<FunnelUi[]>("/internal/funnels/ui"),
-
-//   getUi: (id: string) =>
-//     api<FunnelUi>(`/internal/funnels/ui/${id}`),
-// }
-
-
-/* -------- Funnels (UI) -------- */
+/* -------- Funnel Definitions -------- */
 
 export interface CreateFunnelPayload {
-  ownerMemberId: string
-  customerName: string
-  customerPhone: string
-  customerEmail?: string | null
-  source: string
+  name: string
 }
 
-export interface FunnelSummary {
+export interface FunnelDefinition {
   id: string
-  stage: string
-  ownerMemberId: string
-  channelId: string
-  channelName?: string
+  name: string
+  createdBy: string
+  createdAt: string
 }
 
 export const FunnelAPI = {
   list: (channelId: string) =>
-    api<FunnelSummary[]>(
-      `/internal/channels/${channelId}/funnels/ui`
+    api<FunnelDefinition[]>(
+      `/internal/channels/${channelId}/funnels`
     ),
 
   create: (
     channelId: string,
     payload: CreateFunnelPayload
   ) =>
-    api(`/internal/channels/${channelId}/funnels`, {
-      method: "POST",
-      body: JSON.stringify(payload),
-    }),
+    api<FunnelDefinition>(
+      `/internal/channels/${channelId}/funnels`,
+      {
+        method: "POST",
+        body: JSON.stringify(payload),
+      }
+    ),
 
-  getUi: (channelId: string, id: string) =>
-    api<FunnelUi>(
-      `/internal/channels/${channelId}/funnels/${id}/ui`
+  get: (channelId: string, id: string) =>
+    api<FunnelDefinition>(
+      `/internal/channels/${channelId}/funnels/${id}`
     ),
 }

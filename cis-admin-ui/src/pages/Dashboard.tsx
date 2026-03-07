@@ -1,6 +1,11 @@
 import { useQuery } from "@tanstack/react-query"
 import { useNavigate } from "react-router-dom"
-import { ApiError, FunnelAPI, type FunnelSummary } from "../lib/api"
+import {
+  ApiError,
+  ChannelAPI,
+  FunnelAPI,
+  type FunnelDefinition,
+} from "../lib/api"
 import { useAuth } from "../context/AuthContext"
 import type { DecodedActor } from "../lib/jwt"
 
@@ -55,8 +60,13 @@ export default function Dashboard() {
     permissions.includes("CREATE_FUNNEL")
 
   const funnelsQuery = useQuery({
-    queryKey: ["funnels", "summary", selectedChannelId],
+    queryKey: ["funnels", "channel", selectedChannelId],
     queryFn: () => FunnelAPI.list(selectedChannelId!),
+    enabled: !!selectedChannelId,
+  })
+  const activeChannelQuery = useQuery({
+    queryKey: ["channel", selectedChannelId],
+    queryFn: () => ChannelAPI.get(selectedChannelId!),
     enabled: !!selectedChannelId,
   })
 
@@ -64,7 +74,7 @@ export default function Dashboard() {
     return <div>Please log in</div>
   }
 
-  const funnels: FunnelSummary[] = funnelsQuery.data ?? []
+  const funnels: FunnelDefinition[] = funnelsQuery.data ?? []
 
   return (
     <div className="space-y-6">
@@ -119,10 +129,8 @@ export default function Dashboard() {
                 <thead className="text-[var(--text-muted)]">
                   <tr>
                     <th className="text-left py-1">ID</th>
-                    <th className="text-left py-1">
-                      Channel
-                    </th>
-                    <th className="text-left py-1">Stage</th>
+                    <th className="text-left py-1">Name</th>
+                    <th className="text-left py-1">Created At</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -137,10 +145,10 @@ export default function Dashboard() {
                       }
                     >
                       <td className="py-1 font-mono text-xs">{f.id.slice(-6)}</td>
+                      <td className="py-1">{f.name}</td>
                       <td className="py-1">
-                        {f.channelName ?? f.channelId}
+                        {new Date(f.createdAt).toLocaleString()}
                       </td>
-                      <td className="py-1">{f.stage}</td>
                     </tr>
                   ))}
                 </tbody>
@@ -152,7 +160,10 @@ export default function Dashboard() {
 
       <div className="grid grid-cols-2 gap-4">
         <div className="bg-[var(--bg-card)] p-4 rounded">
-          Active Channel: {selectedChannelId ?? "—"}
+          Active Channel:{" "}
+          {activeChannelQuery.data?.name ??
+            selectedChannelId ??
+            "—"}
         </div>
         <div className="bg-[var(--bg-card)] p-4 rounded">
           Visible Funnels: {funnels.length}
