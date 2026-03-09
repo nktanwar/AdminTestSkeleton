@@ -78,6 +78,26 @@ const FULL_CAPABILITIES: ChannelCapabilities = {
   canUpdateChannel: true,
 }
 
+const FALLBACK_AUTH_CONTEXT: AuthContextValue = {
+  status: "unauthenticated",
+  actor: null,
+  userId: null,
+  memberships: [],
+  selectedMembershipId: null,
+  selectedChannelId: null,
+  globalRole: null,
+  isAdmin: false,
+  permissions: [],
+  channelMe: null,
+  capabilities: EMPTY_CAPABILITIES,
+  capabilitiesLoading: false,
+  login: async () => {},
+  selectMembership: async () => {},
+  selectChannel: () => {},
+  logout: () => {},
+  refreshSession: async () => false,
+}
+
 function normalizeGlobalRole(
   value: string | null | undefined
 ): "ADMIN" | "USER" | null {
@@ -231,9 +251,6 @@ export function AuthProvider({
     }
 
     const nextActor = getActorFromToken()
-    if (import.meta.env.DEV) {
-      console.log("[Auth] Current JWT payload:", nextActor)
-    }
     const nextRole = resolveRoleFromActor(nextActor)
     setActor(nextActor)
     setPermissions(nextActor?.permissionCodes ?? [])
@@ -445,9 +462,10 @@ export function AuthProvider({
 export function useAuth() {
   const ctx = useContext(AuthContext)
   if (!ctx) {
-    throw new Error(
-      "useAuth must be used inside AuthProvider"
+    console.error(
+      "useAuth was used without AuthProvider. Falling back to unauthenticated context."
     )
+    return FALLBACK_AUTH_CONTEXT
   }
   return ctx
 }

@@ -7,6 +7,7 @@ import {
 import { useQuery } from "@tanstack/react-query"
 import { ChannelAPI } from "../lib/api"
 import { useAuth } from "../context/AuthContext"
+import { canViewFunnels } from "../lib/access"
 
 export default function ChannelLayout() {
   const { channelId } = useParams()
@@ -14,7 +15,10 @@ export default function ChannelLayout() {
     capabilities,
     selectedChannelId,
     selectChannel,
+    isAdmin,
+    permissions,
   } = useAuth()
+  const showFunnelsTab = canViewFunnels(isAdmin, permissions)
 
   useEffect(() => {
     if (!channelId) return
@@ -62,9 +66,12 @@ export default function ChannelLayout() {
       {/* Channel Navigation */}
       <div className="flex gap-4 border-b border-[var(--border)] pb-2">
         <ChannelTab to="">Dashboard</ChannelTab>
-        <ChannelTab to="funnels" end={false}>
-          Funnels
-        </ChannelTab>
+        {showFunnelsTab && (
+          <ChannelTab to="funnels" end={false}>
+            Funnels
+          </ChannelTab>
+        )}
+        <ChannelTab to="my-leads">My Leads</ChannelTab>
         {capabilities.canViewMembers && (
           <ChannelTab to="members">Members</ChannelTab>
         )}

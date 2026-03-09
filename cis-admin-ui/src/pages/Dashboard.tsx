@@ -8,6 +8,7 @@ import {
 } from "../lib/api"
 import { useAuth } from "../context/AuthContext"
 import type { DecodedActor } from "../lib/jwt"
+import { canViewFunnels } from "../lib/access"
 
 function PermissionPanel({ actor }: { actor: DecodedActor }) {
   const hasFullAccess =
@@ -53,6 +54,10 @@ export default function Dashboard() {
     isAdmin,
     permissions,
   } = useAuth()
+  const canViewFunnelsInChannel = canViewFunnels(
+    isAdmin,
+    permissions
+  )
   const navigate = useNavigate()
   const canCreateFunnel =
     isAdmin ||
@@ -62,7 +67,7 @@ export default function Dashboard() {
   const funnelsQuery = useQuery({
     queryKey: ["funnels", "channel", selectedChannelId],
     queryFn: () => FunnelAPI.list(selectedChannelId!),
-    enabled: !!selectedChannelId,
+    enabled: !!selectedChannelId && canViewFunnelsInChannel,
   })
   const activeChannelQuery = useQuery({
     queryKey: ["channel", selectedChannelId],
@@ -82,7 +87,7 @@ export default function Dashboard() {
 
       <PermissionPanel actor={actor} />
 
-      {canCreateFunnel && (
+      {canViewFunnelsInChannel && canCreateFunnel && (
         <button
           onClick={() =>
             selectedChannelId &&
@@ -102,23 +107,34 @@ export default function Dashboard() {
           Recent Funnels
         </h3>
 
+        {!canViewFunnelsInChannel && (
+          <p className="text-sm text-[var(--text-muted)]">
+            Funnel view is disabled for your role in this channel.
+          </p>
+        )}
+
         {!selectedChannelId && (
           <p className="text-sm text-[var(--text-muted)]">
             Select a channel to view funnels.
           </p>
         )}
 
-        {selectedChannelId && funnelsQuery.isLoading && (
+        {canViewFunnelsInChannel &&
+          selectedChannelId &&
+          funnelsQuery.isLoading && (
           <p className="text-sm text-[var(--text-muted)]">Loading funnels...</p>
         )}
 
-        {selectedChannelId && funnelsQuery.error && (
+        {canViewFunnelsInChannel &&
+          selectedChannelId &&
+          funnelsQuery.error && (
           <p className="text-sm text-red-500">
             {toErrorMessage(funnelsQuery.error)}
           </p>
         )}
 
-        {selectedChannelId &&
+        {canViewFunnelsInChannel &&
+          selectedChannelId &&
           !funnelsQuery.isLoading &&
           !funnelsQuery.error && (
           <>
@@ -166,7 +182,7 @@ export default function Dashboard() {
             "—"}
         </div>
         <div className="bg-[var(--bg-card)] p-4 rounded">
-          Visible Funnels: {funnels.length}
+          Visible Funnels: {canViewFunnelsInChannel ? funnels.length : 0}
         </div>
       </div>
     </div>

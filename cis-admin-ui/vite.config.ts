@@ -12,6 +12,7 @@ export default defineConfig({
       "/auth": "http://localhost:8082",
       "/internal": "http://localhost:8082",
       "/api": "http://localhost:8082",
+      "/lead": "http://localhost:8082",
     },
   },
 })

@@ -5,6 +5,7 @@ import './index.css'
 import App from './App.tsx'
 import { getTheme, setTheme } from "./lib/theme"
 import { queryClient } from "./lib/queryClient"
+import { AuthProvider } from "./context/AuthContext"
 
 setTheme(getTheme())
 
@@ -12,7 +13,9 @@ setTheme(getTheme())
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
     <QueryClientProvider client={queryClient}>
-      <App />
+      <AuthProvider>
+        <App />
+      </AuthProvider>
     </QueryClientProvider>
   </StrictMode>,
 )

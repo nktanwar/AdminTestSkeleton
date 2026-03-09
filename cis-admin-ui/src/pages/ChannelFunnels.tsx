@@ -6,6 +6,7 @@ import {
   type FunnelDefinition,
 } from "../lib/api"
 import { useAuth } from "../context/AuthContext"
+import { canViewFunnels } from "../lib/access"
 
 function toErrorMessage(error: unknown): string {
   if (error instanceof ApiError && error.status === 403) {
@@ -29,6 +30,10 @@ export default function ChannelFunnels() {
   }>()
   const navigate = useNavigate()
   const { isAdmin, permissions } = useAuth()
+  const canViewFunnelsInChannel = canViewFunnels(
+    isAdmin,
+    permissions
+  )
   const canCreateFunnel =
     isAdmin ||
     permissions.includes("ADMIN_OVERRIDE") ||
@@ -37,7 +42,7 @@ export default function ChannelFunnels() {
   const funnelsQuery = useQuery({
     queryKey: ["funnels", "channel", channelId],
     queryFn: () => FunnelAPI.list(channelId!),
-    enabled: !!channelId,
+    enabled: !!channelId && canViewFunnelsInChannel,
   })
 
   if (!channelId) {
@@ -49,6 +54,20 @@ export default function ChannelFunnels() {
   }
 
   const funnels: FunnelDefinition[] = funnelsQuery.data ?? []
+
+  if (!canViewFunnelsInChannel) {
+    return (
+      <div className="space-y-3">
+        <h2 className="text-xl font-semibold">Funnels</h2>
+        <p className="text-sm text-[var(--text-muted)]">
+          You are not allowed to view funnels for this channel.
+        </p>
+        <p className="text-sm text-[var(--text-muted)]">
+          Assigned leads (if any) are available in channel dashboard.
+        </p>
+      </div>
+    )
+  }
 
   return (
     <div className="space-y-6">
