@@ -4,6 +4,22 @@
 
 ### Work Done (Current Session)
 
+- Implemented Lead Module integration in funnel view:
+  - Lead list table with columns: customer, phone, owner, stage, status, creator, created at
+  - Client-side filters: stage, status, owner, search by name, search by phone
+  - Manual lead creation via `POST /lead/{channelId}/create`
+  - Bulk assignment via `POST /lead/{channelId}/assign`
+  - Empty state messaging for no leads and no filter results
+- Added dedicated lead detail page:
+  - Route: `/channels/:channelId/funnels/:id/leads/:leadId`
+  - Customer and lead metadata sections
+  - Stage history timeline
+  - Events timeline with transfer-friendly rendering
+- Extended API layer with Lead contracts:
+  - `LeadAPI.list(channelId, funnelId)`
+  - `LeadAPI.create(channelId, payload)`
+  - `LeadAPI.assign(channelId, payload)`
+
 - Added centralized auth architecture:
   - `AuthProvider` + `useAuth`
   - `ProtectedRoute` + dedicated `/login` route flow
@@ -32,6 +48,8 @@
 - Made future feature work safer and easier to scale
 
 ### Next Session TODO
+
+ - 1 Leads view and my leads fix 
 
 - Add query key constants per domain (`channels`, `members`, `permissions`, `funnels`)
 - Move API + hooks into feature folders for cleaner module boundaries

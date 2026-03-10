@@ -12,7 +12,10 @@ export default function ProtectedRoute() {
     )
   }
 
-  if (status === "unauthenticated") {
+  if (
+    status === "unauthenticated" ||
+    status === "membership-selection"
+  ) {
     return <Navigate to="/login" replace />
   }
 

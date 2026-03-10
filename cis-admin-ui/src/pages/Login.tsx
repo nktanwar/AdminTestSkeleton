@@ -68,34 +68,42 @@ export default function Login() {
           </section>
 
           <section className="rounded-xl border border-[var(--border)] bg-[var(--bg-card)] shadow-[var(--shadow-card)] p-8">
-            <div className="space-y-1 mb-6">
-              <h2 className="text-2xl">Sign In</h2>
-              <p className="text-sm text-[var(--text-muted)]">
-                Use your admin email to access the dashboard.
-              </p>
-            </div>
+            <>
+              <div className="space-y-1 mb-6">
+                <h2 className="text-2xl">Sign In</h2>
+                <p className="text-sm text-[var(--text-muted)]">
+                  Use your email to access the dashboard.
+                </p>
+              </div>
 
-            <label className="block text-sm font-semibold mb-2">Email</label>
-            <input
-              type="email"
-              placeholder="admin@alisan.com"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              onKeyDown={(e) => {
-                if (e.key === "Enter") submit()
-              }}
-              className="w-full px-3 py-2 rounded-lg bg-zinc-800 border border-[var(--border)] focus:outline-none focus:ring-2 focus:ring-[var(--accent-soft)]"
-            />
+              <label className="block text-sm font-semibold mb-2">
+                Email
+              </label>
+              <input
+                type="email"
+                placeholder="admin@alisan.com"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter") submit()
+                }}
+                className="w-full px-3 py-2 rounded-lg bg-zinc-800 border border-[var(--border)] focus:outline-none focus:ring-2 focus:ring-[var(--accent-soft)]"
+              />
 
-            {error && <p className="text-sm text-red-500 mt-3">{error}</p>}
+              {error && (
+                <p className="text-sm text-red-500 mt-3">
+                  {error}
+                </p>
+              )}
 
-            <button
-              onClick={submit}
-              disabled={loading}
-              className="mt-5 w-full py-2.5 rounded-lg bg-[var(--accent-strong)] hover:opacity-90 disabled:opacity-50"
-            >
-              {loading ? "Logging in..." : "Continue to Dashboard"}
-            </button>
+              <button
+                onClick={submit}
+                disabled={loading}
+                className="mt-5 w-full py-2.5 rounded-lg bg-[var(--accent-strong)] hover:opacity-90 disabled:opacity-50"
+              >
+                {loading ? "Signing in..." : "Continue"}
+              </button>
+            </>
           </section>
         </div>
       </div>

@@ -11,15 +11,17 @@ import Dashboard from "./pages/Dashboard"
 import Channels from "./pages/Channels"
 import Members from "./pages/Members"
 import PermissionSets from "./pages/PermissionSets"
-import DemoSwitch from "./pages/DemoSwitch"
 import Login from "./pages/Login"
 import ChannelView from "./pages/ChannelView"
 import FunnelView from "./pages/FunnelView"
+import ChannelFunnels from "./pages/ChannelFunnels"
 import ChannelLayout from "./layout/ChannelLayout"
 import CreateFunnel from "./pages/CreateFunnel"
 import Profile from "./pages/Profile"
+import ChannelSettings from "./pages/ChannelSettings"
+import LeadDetail from "./pages/LeadDetail"
+import MyLeads from "./pages/MyLeads"
 import {
-  AuthProvider,
   useAuth,
 } from "./context/AuthContext"
 import ProtectedRoute from "./routes/ProtectedRoute"
@@ -53,46 +55,62 @@ function LoginRoute() {
 export default function App() {
   return (
     <BrowserRouter>
-      <AuthProvider>
-        <Routes>
-          <Route path="/login" element={<LoginRoute />} />
+      <Routes>
+        <Route path="/login" element={<LoginRoute />} />
 
-          <Route element={<ProtectedRoute />}>
-            <Route element={<AppShell />}>
-              {/* Global */}
-              <Route path="/" element={<Dashboard />} />
-              <Route path="/channels" element={<Channels />} />
+        <Route element={<ProtectedRoute />}>
+          <Route element={<AppShell />}>
+            {/* Global */}
+            <Route path="/" element={<Dashboard />} />
+            <Route path="/channels" element={<Channels />} />
+            <Route
+              path="/permissions"
+              element={<PermissionSets />}
+            />
+            <Route path="/profile" element={<Profile />} />
+
+            {/* Channel scoped */}
+            <Route
+              path="/channels/:channelId"
+              element={<ChannelLayout />}
+            >
+              <Route index element={<ChannelView />} />
               <Route
-                path="/permissions"
-                element={<PermissionSets />}
+                path="funnels"
+                element={<ChannelFunnels />}
               />
-              <Route path="/demo" element={<DemoSwitch />} />
-              <Route path="/profile" element={<Profile />} />
-              <Route path="/funnels/:id" element={<FunnelView />} />
               <Route
-                path="/funnels/new"
+                path="funnels/new"
                 element={<CreateFunnel />}
               />
-
-              {/* Channel scoped */}
               <Route
-                path="/channels/:channelId"
-                element={<ChannelLayout />}
-              >
-                <Route index element={<ChannelView />} />
-                <Route
-                  path="members"
-                  element={<Members />}
-                />
-                <Route
-                  path="permissions"
-                  element={<PermissionSets />}
-                />
-              </Route>
+                path="funnels/:id"
+                element={<FunnelView />}
+              />
+              <Route
+                path="funnels/:id/leads/:leadId"
+                element={<LeadDetail />}
+              />
+              <Route
+                path="leads/:leadId"
+                element={<LeadDetail />}
+              />
+              <Route
+                path="my-leads"
+                element={<MyLeads />}
+              />
+              <Route
+                path="members"
+                element={<Members />}
+              />
+              <Route
+                path="settings"
+                element={<ChannelSettings />}
+              />
             </Route>
           </Route>
-        </Routes>
-      </AuthProvider>
+        </Route>
+      </Routes>
     </BrowserRouter>
   )
 }

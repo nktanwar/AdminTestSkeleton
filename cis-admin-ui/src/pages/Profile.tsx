@@ -1,28 +1,90 @@
-import { getToken } from "../lib/auth"
+import { useAuth } from "../context/AuthContext"
 
-function decode(token: string) {
-  try {
-    const payload = token.split(".")[1]
-    return JSON.parse(atob(payload))
-  } catch {
-    return null
+function toTitleCase(value: string): string {
+  return value
+    .toLowerCase()
+    .split(/[_\s-]+/)
+    .filter(Boolean)
+    .map((segment) => {
+      return (
+        segment.charAt(0).toUpperCase() +
+        segment.slice(1)
+      )
+    })
+    .join(" ")
+}
+
+function getDisplayRole(
+  globalRole: string | null,
+  actorType: string | undefined
+): string {
+  if (globalRole) {
+    return toTitleCase(globalRole)
   }
+
+  if (actorType) {
+    return toTitleCase(actorType)
+  }
+
+  return "User"
+}
+
+function getAvatarInitials(value: string): string {
+  const parts = value
+    .split(/\s+/)
+    .filter(Boolean)
+    .slice(0, 2)
+
+  if (parts.length === 0) {
+    return "U"
+  }
+
+  return parts
+    .map((part) => part[0]?.toUpperCase() ?? "")
+    .join("")
 }
 
 export default function Profile() {
-  const token = getToken()
-  const actor = token ? decode(token) : null
+  const {
+    actor,
+    globalRole,
+    selectedChannelId,
+    selectedMembershipId,
+    permissions,
+  } = useAuth()
+  const hasFullAccess =
+    actor?.type === "ADMIN" ||
+    permissions.includes("ADMIN_OVERRIDE")
+  const permissionSummary = hasFullAccess
+    ? "All"
+    : String(permissions.length)
+  const displayRole = getDisplayRole(
+    globalRole,
+    actor?.type
+  )
+  const profileTitle =
+    actor?.type === "ADMIN" || globalRole === "ADMIN"
+      ? "Administrator"
+      : displayRole
+  const profileSubtitle = actor?.sub
+    ? `User ID: ${actor.sub}`
+    : "Signed-in account"
+  const avatarInitials = getAvatarInitials(profileTitle)
 
   return (
     <div className="max-w-3xl space-y-6">
       <div className="bg-[var(--bg-card)] border border-[var(--border)] rounded-lg p-6">
         <div className="flex items-center gap-4">
           <div className="h-14 w-14 rounded-full bg-[var(--accent-soft)] text-[var(--accent)] flex items-center justify-center text-lg font-bold">
-            AU
+            {avatarInitials}
           </div>
           <div>
-            <div className="text-xl font-semibold">Admin User</div>
-            <div className="text-sm text-[var(--text-muted)]">admin@company.com</div>
+            <div className="text-xl font-semibold">
+              {profileTitle}
+            </div>
+            <div className="text-sm text-[var(--text-muted)]">
+              {profileSubtitle}
+            </div>
           </div>
         </div>
       </div>
@@ -33,7 +95,9 @@ export default function Profile() {
         <div className="grid grid-cols-2 gap-4">
           <div>
             <div className="text-xs text-[var(--text-muted)]">Role</div>
-            <div className="text-sm font-semibold">{actor?.type || "—"}</div>
+            <div className="text-sm font-semibold">
+              {displayRole}
+            </div>
           </div>
           <div>
             <div className="text-xs text-[var(--text-muted)]">User ID</div>
@@ -41,13 +105,23 @@ export default function Profile() {
           </div>
           <div>
             <div className="text-xs text-[var(--text-muted)]">Channel</div>
-            <div className="text-sm">{actor?.channelId || "—"}</div>
+            <div className="text-sm">
+              {selectedChannelId || actor?.channelId || "—"}
+            </div>
+          </div>
+          <div>
+            <div className="text-xs text-[var(--text-muted)]">
+              Membership
+            </div>
+            <div className="text-sm font-mono">
+              {selectedMembershipId ||
+                actor?.membershipId ||
+                "—"}
+            </div>
           </div>
           <div>
             <div className="text-xs text-[var(--text-muted)]">Permissions</div>
-            <div className="text-sm">
-              {actor?.permissionCodes?.length || 0}
-            </div>
+            <div className="text-sm">{permissionSummary}</div>
           </div>
         </div>
       </div>

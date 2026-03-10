@@ -1,9 +1,36 @@
-import { Outlet, useParams, NavLink } from "react-router-dom"
+import { useEffect } from "react"
+import {
+  Outlet,
+  useParams,
+  NavLink,
+} from "react-router-dom"
 import { useQuery } from "@tanstack/react-query"
 import { ChannelAPI } from "../lib/api"
+import { useAuth } from "../context/AuthContext"
+import { canViewFunnels } from "../lib/access"
 
 export default function ChannelLayout() {
   const { channelId } = useParams()
+  const {
+    capabilities,
+    selectedChannelId,
+    selectChannel,
+    isAdmin,
+    channelMe,
+    permissions,
+  } = useAuth()
+  const isChannelAdmin =
+    isAdmin || channelMe?.isAdmin === true
+  const showFunnelsTab = canViewFunnels(
+    isChannelAdmin,
+    permissions
+  )
+
+  useEffect(() => {
+    if (!channelId) return
+    if (selectedChannelId === channelId) return
+    selectChannel(channelId)
+  }, [channelId, selectedChannelId, selectChannel])
 
   const channelQuery = useQuery({
     queryKey: ["channel", channelId],
@@ -45,8 +72,20 @@ export default function ChannelLayout() {
       {/* Channel Navigation */}
       <div className="flex gap-4 border-b border-[var(--border)] pb-2">
         <ChannelTab to="">Dashboard</ChannelTab>
-        <ChannelTab to="members">Members</ChannelTab>
-        <ChannelTab to="permissions">Permission Sets</ChannelTab>
+        {showFunnelsTab && (
+          <ChannelTab to="funnels" end={false}>
+            Funnels
+          </ChannelTab>
+        )}
+        {!isChannelAdmin && (
+          <ChannelTab to="my-leads">My Leads</ChannelTab>
+        )}
+        {capabilities.canViewMembers && (
+          <ChannelTab to="members">Members</ChannelTab>
+        )}
+        {capabilities.canUpdateChannel && (
+          <ChannelTab to="settings">Settings</ChannelTab>
+        )}
       </div>
 
       {/* Channel Page Content */}
@@ -58,14 +97,16 @@ export default function ChannelLayout() {
 function ChannelTab({
   to,
   children,
+  end = true,
 }: {
   to: string
   children: React.ReactNode
+  end?: boolean
 }) {
   return (
     <NavLink
       to={to}
-      end
+      end={end}
       className={({ isActive }) =>
         `px-3 py-1 rounded text-sm ${
           isActive
