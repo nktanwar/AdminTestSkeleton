@@ -1,8 +1,67 @@
 import { NavLink } from "react-router-dom"
 import { useAuth } from "../context/AuthContext"
 
+function toTitleCase(value: string): string {
+  return value
+    .toLowerCase()
+    .split(/[_\s-]+/)
+    .filter(Boolean)
+    .map((segment) => {
+      return (
+        segment.charAt(0).toUpperCase() +
+        segment.slice(1)
+      )
+    })
+    .join(" ")
+}
+
+function getDisplayTitle(
+  rawGlobalRole: string | null | undefined,
+  membershipRole: string | null,
+  actorType: string | undefined
+): string {
+  const preferred =
+    rawGlobalRole ??
+    membershipRole ??
+    actorType ??
+    "User"
+
+  return toTitleCase(preferred)
+}
+
+function getAvatarInitials(value: string): string {
+  const parts = value
+    .split(/\s+/)
+    .filter(Boolean)
+    .slice(0, 2)
+
+  if (parts.length === 0) {
+    return "U"
+  }
+
+  return parts
+    .map((part) => part[0]?.toUpperCase() ?? "")
+    .join("")
+}
+
 export default function Sidebar() {
-  const { capabilities } = useAuth()
+  const {
+    actor,
+    capabilities,
+    memberships,
+    selectedMembershipId,
+  } = useAuth()
+  const selectedMembership =
+    memberships.find(
+      (membership) =>
+        membership.membershipId === selectedMembershipId
+    ) ?? null
+  const displayTitle = getDisplayTitle(
+    actor?.globalRole,
+    selectedMembership?.role ?? null,
+    actor?.type
+  )
+  const avatarInitials = getAvatarInitials(displayTitle)
   const links = [
     { name: "Dashboard", to: "/" },
     { name: "Channels", to: "/channels" },
@@ -49,10 +108,12 @@ export default function Sidebar() {
         }
       >
         <div className="h-9 w-9 rounded-full bg-[var(--accent-soft)] text-[var(--accent)] flex items-center justify-center font-semibold">
-          AU
+          {avatarInitials}
         </div>
         <div className="flex-1 min-w-0">
-          <div className="text-sm font-semibold truncate">Admin User</div>
+          <div className="text-sm font-semibold truncate">
+            {displayTitle}
+          </div>
           <div className="text-xs text-[var(--text-muted)] truncate">
             View Profile
           </div>

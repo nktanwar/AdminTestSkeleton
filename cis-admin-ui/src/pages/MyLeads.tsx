@@ -1,11 +1,16 @@
 import { useMemo, useState } from "react"
 import { useQuery } from "@tanstack/react-query"
-import { useNavigate, useParams } from "react-router-dom"
+import {
+  Navigate,
+  useNavigate,
+  useParams,
+} from "react-router-dom"
 import {
   ChannelAPI,
   LeadAPI,
   type Lead,
 } from "../lib/api"
+import { useAuth } from "../context/AuthContext"
 
 const STAGE_OPTIONS = [
   "NEW",
@@ -36,21 +41,31 @@ function isObjectIdHex(value: string): boolean {
 }
 
 function getLeadFunnelId(lead: Lead): string | null {
-  if (lead.funnelId) {
+  if (lead.funnelId && isObjectIdHex(lead.funnelId)) {
     return lead.funnelId
-  }
-
-  const fromRaw = lead.raw.funnelId ?? lead.raw.funnel_id
-  if (typeof fromRaw === "string" && fromRaw.trim()) {
-    return fromRaw.trim()
   }
 
   return null
 }
 
+function getLeadDetailPath(
+  channelId: string,
+  lead: Lead
+): string {
+  const leadFunnelId = getLeadFunnelId(lead)
+  if (leadFunnelId) {
+    return `/channels/${channelId}/funnels/${leadFunnelId}/leads/${lead.id}`
+  }
+
+  return `/channels/${channelId}/leads/${lead.id}`
+}
+
 export default function MyLeads() {
   const { channelId } = useParams<{ channelId: string }>()
   const navigate = useNavigate()
+  const { isAdmin, channelMe } = useAuth()
+  const isChannelAdmin =
+    isAdmin || channelMe?.isAdmin === true
 
   const [stageFilter, setStageFilter] = useState("ALL")
   const [statusFilter, setStatusFilter] = useState("ALL")
@@ -123,6 +138,15 @@ export default function MyLeads() {
 
   if (!channelId) {
     return <div className="text-red-500">Invalid channel id.</div>
+  }
+
+  if (isChannelAdmin) {
+    return (
+      <Navigate
+        to={`/channels/${channelId}`}
+        replace
+      />
+    )
   }
 
   return (
@@ -237,23 +261,20 @@ export default function MyLeads() {
             </thead>
             <tbody>
               {filteredLeads.map((lead) => {
-                const leadFunnelId = getLeadFunnelId(lead)
-                const canOpenLead = !!leadFunnelId
+                const detailPath = getLeadDetailPath(
+                  channelId,
+                  lead
+                )
 
                 return (
                   <tr
                     key={lead.id}
                     className={[
                       "border-t border-[var(--border)]",
-                      canOpenLead
-                        ? "cursor-pointer hover:bg-[var(--accent-soft)]"
-                        : "",
+                      "cursor-pointer hover:bg-[var(--accent-soft)]",
                     ].join(" ")}
                     onClick={() => {
-                      if (!canOpenLead) return
-                      navigate(
-                        `/channels/${channelId}/funnels/${leadFunnelId}/leads/${lead.id}`
-                      )
+                      navigate(detailPath)
                     }}
                   >
                     <td className="px-4 py-3">
@@ -271,11 +292,6 @@ export default function MyLeads() {
                     <td className="px-4 py-3 font-semibold">{lead.status}</td>
                     <td className="px-4 py-3 font-medium">
                       {formatDate(lead.createdAt)}
-                      {!canOpenLead && (
-                        <div className="text-xs text-amber-400 mt-1">
-                          Funnel id unavailable for open action.
-                        </div>
-                      )}
                     </td>
                   </tr>
                 )

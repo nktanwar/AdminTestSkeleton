@@ -16,9 +16,15 @@ export default function ChannelLayout() {
     selectedChannelId,
     selectChannel,
     isAdmin,
+    channelMe,
     permissions,
   } = useAuth()
-  const showFunnelsTab = canViewFunnels(isAdmin, permissions)
+  const isChannelAdmin =
+    isAdmin || channelMe?.isAdmin === true
+  const showFunnelsTab = canViewFunnels(
+    isChannelAdmin,
+    permissions
+  )
 
   useEffect(() => {
     if (!channelId) return
@@ -71,7 +77,9 @@ export default function ChannelLayout() {
             Funnels
           </ChannelTab>
         )}
-        <ChannelTab to="my-leads">My Leads</ChannelTab>
+        {!isChannelAdmin && (
+          <ChannelTab to="my-leads">My Leads</ChannelTab>
+        )}
         {capabilities.canViewMembers && (
           <ChannelTab to="members">Members</ChannelTab>
         )}

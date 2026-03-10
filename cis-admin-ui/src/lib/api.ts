@@ -61,6 +61,40 @@ function resolveApiUrl(path: string): string {
   return joinBaseAndPath(BASE_URL, path)
 }
 
+function redactAuthorizationHeader(value: string): string {
+  const trimmed = value.trim()
+  if (!trimmed) {
+    return trimmed
+  }
+
+  const bearerPrefix = /^Bearer\s+/i
+  if (!bearerPrefix.test(trimmed)) {
+    return trimmed
+  }
+
+  const token = trimmed.replace(bearerPrefix, "")
+  if (token.length <= 12) {
+    return "Bearer [redacted]"
+  }
+
+  return `Bearer ${token.slice(0, 8)}...[redacted]...${token.slice(-4)}`
+}
+
+function toDebugHeaders(
+  headers: HeadersInit | undefined
+): Record<string, string> {
+  const normalized = new Headers(headers)
+  const entries = Object.fromEntries(normalized.entries())
+
+  if (entries.Authorization) {
+    entries.Authorization = redactAuthorizationHeader(
+      entries.Authorization
+    )
+  }
+
+  return entries
+}
+
 export class ApiError extends Error {
   readonly status: number
   readonly rawBody: string
@@ -136,23 +170,47 @@ async function api<T>(
 ): Promise<T> {
   const token = getToken()
   const requestUrl = resolveApiUrl(path)
+  const shouldDebugLeadRequest =
+    import.meta.env.DEV && path.startsWith("/lead/")
+  const requestHeaders: HeadersInit = {
+    "Content-Type": "application/json",
+    ...(token ? { Authorization: `Bearer ${token}` } : {}),
+    ...(options.headers || {}),
+  }
+  const requestMethod = options.method ?? "GET"
 
-  if (import.meta.env.DEV && path.startsWith("/lead/")) {
-    console.debug("[LeadAPI URL]", {
-      baseUrl: BASE_URL,
-      path,
-      requestUrl,
-    })
+  if (shouldDebugLeadRequest) {
+    console.groupCollapsed(
+      `[LeadAPI request] ${requestMethod} ${path}`
+    )
+    console.debug("baseUrl", BASE_URL)
+    console.debug("requestUrl", requestUrl)
+    console.debug("method", requestMethod)
+    console.debug("headers", toDebugHeaders(requestHeaders))
+    console.debug("body", options.body ?? null)
+    console.groupEnd()
   }
 
   const res = await fetch(requestUrl, {
     ...options,
-    headers: {
-      "Content-Type": "application/json",
-      ...(token ? { Authorization: `Bearer ${token}` } : {}),
-      ...(options.headers || {}),
-    },
+    headers: requestHeaders,
   })
+
+  let debugResponseText: string | null = null
+  if (shouldDebugLeadRequest) {
+    debugResponseText = await res.clone().text()
+    console.groupCollapsed(
+      `[LeadAPI response] ${requestMethod} ${path}`
+    )
+    console.debug("status", res.status)
+    console.debug("ok", res.ok)
+    console.debug(
+      "headers",
+      Object.fromEntries(res.headers.entries())
+    )
+    console.debug("rawBody", debugResponseText || null)
+    console.groupEnd()
+  }
 
   if (!res.ok) {
     const text = await res.text()
@@ -176,7 +234,14 @@ async function api<T>(
 
   const contentType = res.headers.get("content-type") ?? ""
   if (contentType.includes("application/json")) {
-    return res.json()
+    const parsed = await res.json()
+    if (shouldDebugLeadRequest) {
+      console.debug(
+        `[LeadAPI parsed json] ${requestMethod} ${path}`,
+        parsed
+      )
+    }
+    return parsed
   }
 
   const text = await res.text()
@@ -515,6 +580,16 @@ export interface AssignLeadsPayload {
 }
 
 export interface AssignLeadsResponse {
+  message: string
+}
+
+export interface MoveLeadStagePayload {
+  leadId: string
+  nextStage: string
+  comment?: string
+}
+
+export interface MoveLeadStageResponse {
   message: string
 }
 
@@ -864,6 +939,18 @@ export const LeadAPI = {
   ) =>
     api<AssignLeadsResponse | void>(
       `/lead/${channelId}/assign`,
+      {
+        method: "POST",
+        body: JSON.stringify(payload),
+      }
+    ),
+
+  moveStage: (
+    channelId: string,
+    payload: MoveLeadStagePayload
+  ) =>
+    api<MoveLeadStageResponse>(
+      `/lead/${channelId}/moveStage`,
       {
         method: "POST",
         body: JSON.stringify(payload),

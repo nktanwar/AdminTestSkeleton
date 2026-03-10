@@ -92,6 +92,10 @@ export default function App() {
                 element={<LeadDetail />}
               />
               <Route
+                path="leads/:leadId"
+                element={<LeadDetail />}
+              />
+              <Route
                 path="my-leads"
                 element={<MyLeads />}
               />
