@@ -296,6 +296,46 @@ export interface ChannelMe {
   capabilities: ChannelCapabilities
 }
 
+export interface DashboardSummary {
+  totalLeads: number
+  conversionRate: number
+}
+
+export interface DashboardSalesLeaderboardEntry {
+  name: string
+  assignedLeads: number
+  converted: number
+  conversionRate: number
+}
+
+export interface DashboardDealerPerformanceEntry {
+  name: string
+  leads: number
+  converted: number
+  conversionRate: number
+}
+
+export interface DashboardRecentFunnel {
+  id: string
+  name: string
+  createdAt: string
+}
+
+export interface DashboardResponse {
+  summary: DashboardSummary
+  salesLeaderboard: DashboardSalesLeaderboardEntry[]
+  dealerPerformance: DashboardDealerPerformanceEntry[]
+  recentFunnels: DashboardRecentFunnel[]
+  dealerCount: number
+}
+
+export const DashboardAPI = {
+  get: (channelId: string) =>
+    api<DashboardResponse>(
+      "/internal/channels/" + channelId + "/dashboard"
+    ),
+}
+
 
 /* -------- Auth -------- */
 
