@@ -55,7 +55,7 @@ interface AuthContextValue {
   channelMe: ChannelMe | null
   capabilities: ChannelCapabilities
   capabilitiesLoading: boolean
-  login: (email: string) => Promise<void>
+  login: (email: string, password: string) => Promise<void>
   selectMembership: (membershipId: string) => Promise<void>
   selectChannel: (channelId: string) => void
   logout: () => void
@@ -286,11 +286,14 @@ export function AuthProvider({
   }, [])
 
   const login = useCallback(
-    async (email: string) => {
+    async (email: string, password: string) => {
       // Prevent cross-user data bleed from previous query cache.
       queryClient.clear()
 
-      const res = await AuthAPI.login(email.trim())
+      const res = await AuthAPI.login(
+        email.trim(),
+        password
+      )
       const normalizedMemberships = normalizeMemberships(
         res.memberships
       )

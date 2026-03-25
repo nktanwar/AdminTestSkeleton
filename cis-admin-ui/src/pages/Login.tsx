@@ -4,6 +4,7 @@ import { useAuth } from "../context/AuthContext"
 
 export default function Login() {
   const [email, setEmail] = useState("")
+  const [password, setPassword] = useState("")
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [theme, setLocalTheme] = useState(getTheme())
@@ -21,11 +22,16 @@ export default function Login() {
       return
     }
 
+    if (!password) {
+      setError("Password is required")
+      return
+    }
+
     setLoading(true)
     setError(null)
 
     try {
-      await login(email.trim())
+      await login(email.trim(), password)
     } catch (e: any) {
       setError(e.message)
     } finally {
@@ -72,7 +78,7 @@ export default function Login() {
               <div className="space-y-1 mb-6">
                 <h2 className="text-2xl">Sign In</h2>
                 <p className="text-sm text-[var(--text-muted)]">
-                  Use your email to access the dashboard.
+                  Use your email and password to access the dashboard.
                 </p>
               </div>
 
@@ -84,6 +90,20 @@ export default function Login() {
                 placeholder="admin@alisan.com"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter") submit()
+                }}
+                className="w-full px-3 py-2 rounded-lg bg-zinc-800 border border-[var(--border)] focus:outline-none focus:ring-2 focus:ring-[var(--accent-soft)]"
+              />
+
+              <label className="block text-sm font-semibold mt-4 mb-2">
+                Password
+              </label>
+              <input
+                type="password"
+                placeholder="Enter your password"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
                 onKeyDown={(e) => {
                   if (e.key === "Enter") submit()
                 }}

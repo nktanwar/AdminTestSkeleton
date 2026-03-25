@@ -340,7 +340,7 @@ export const DashboardAPI = {
 /* -------- Auth -------- */
 
 export const AuthAPI = {
-  login: (email: string) =>
+  login: (email: string, password: string) =>
     api<{
       userId: string
       globalRole: string
@@ -357,7 +357,7 @@ export const AuthAPI = {
       }[] | null
     }>("/auth/login", {
       method: "POST",
-      body: JSON.stringify({ email }),
+      body: JSON.stringify({ email, password }),
     }),
 
   selectMembership: (
