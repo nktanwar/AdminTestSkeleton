@@ -124,7 +124,10 @@ export default function Channels() {
     await deactivateChannelMutation.mutateAsync(channel.id)
   }
 
-  const channels = channelsQuery.data ?? []
+  const channels = useMemo(
+    () => channelsQuery.data ?? [],
+    [channelsQuery.data]
+  )
   const filteredChannels = useMemo(() => {
     const normalizedSearch = search.trim().toLowerCase()
 

@@ -99,7 +99,10 @@ export default function MyLeads() {
     refetchOnReconnect: true,
   })
 
-  const leads = myLeadsQuery.data ?? []
+  const leads = useMemo(
+    () => myLeadsQuery.data ?? [],
+    [myLeadsQuery.data]
+  )
 
   const filteredLeads = useMemo(() => {
     const normalizedName = normalizeText(nameSearch)

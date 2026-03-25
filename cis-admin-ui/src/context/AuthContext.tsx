@@ -405,11 +405,14 @@ export function AuthProvider({
       handleAuthChange,
       30_000
     )
-    void refreshSession()
+    const initialRefresh = window.setTimeout(() => {
+      void refreshSession()
+    }, 0)
 
     return () => {
       unsubscribe()
       window.clearInterval(interval)
+      window.clearTimeout(initialRefresh)
     }
   }, [refreshSession])
 
@@ -462,6 +465,7 @@ export function AuthProvider({
   )
 }
 
+// eslint-disable-next-line react-refresh/only-export-components
 export function useAuth() {
   const ctx = useContext(AuthContext)
   if (!ctx) {

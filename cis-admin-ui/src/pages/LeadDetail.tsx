@@ -590,9 +590,15 @@ export default function LeadDetail() {
   }, [lead])
 
   useEffect(() => {
-    setNextStage(moveStageOptions[0] ?? "")
-    setStageComment("")
-    setStageMoveNotice(null)
+    const resetStageForm = window.requestAnimationFrame(() => {
+      setNextStage(moveStageOptions[0] ?? "")
+      setStageComment("")
+      setStageMoveNotice(null)
+    })
+
+    return () => {
+      window.cancelAnimationFrame(resetStageForm)
+    }
   }, [lead?.id, moveStageOptions])
 
   const moveStageMutation = useMutation({

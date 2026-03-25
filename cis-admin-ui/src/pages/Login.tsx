@@ -2,6 +2,11 @@ import { useState } from "react"
 import { getTheme, setTheme } from "../lib/theme"
 import { useAuth } from "../context/AuthContext"
 
+function toErrorMessage(error: unknown): string {
+  if (error instanceof Error) return error.message
+  return "Unable to sign in"
+}
+
 export default function Login() {
   const [email, setEmail] = useState("")
   const [password, setPassword] = useState("")
@@ -32,8 +37,8 @@ export default function Login() {
 
     try {
       await login(email.trim(), password)
-    } catch (e: any) {
-      setError(e.message)
+    } catch (error: unknown) {
+      setError(toErrorMessage(error))
     } finally {
       setLoading(false)
     }

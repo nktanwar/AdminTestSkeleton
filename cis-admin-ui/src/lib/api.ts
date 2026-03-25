@@ -493,8 +493,6 @@ export const PermissionAPI = {
   listPermissions: async () => {
     const raw = await api<unknown[]>("/internal/permissions/atoms")
     const normalized = (raw ?? []).map(permissionToCode)
-    console.log("[PermissionAPI] atoms raw:", raw)
-    console.log("[PermissionAPI] atoms normalized:", normalized)
     return [...new Set(normalized)]
   },
 

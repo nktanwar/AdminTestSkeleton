@@ -89,25 +89,20 @@ export default function PermissionSets() {
     const normalizedSets = setsQuery.data.map(
       normalizePermissionSet
     )
-
-    const backendPermissions = [
-      ...new Set(
-        normalizedSets.flatMap((set) => set.permissions)
-      ),
-    ]
-    console.log(
-      "[PermissionSets] Backend permissions:",
-      backendPermissions
-    )
-
-    setSets(normalizedSets)
-    setSavedSets(normalizedSets)
-    setActiveSetId((prev) => {
-      if (prev && normalizedSets.some((s) => s.id === prev)) {
-        return prev
-      }
-      return normalizedSets[0]?.id ?? null
+    const syncPermissionSets = window.requestAnimationFrame(() => {
+      setSets(normalizedSets)
+      setSavedSets(normalizedSets)
+      setActiveSetId((prev) => {
+        if (prev && normalizedSets.some((set) => set.id === prev)) {
+          return prev
+        }
+        return normalizedSets[0]?.id ?? null
+      })
     })
+
+    return () => {
+      window.cancelAnimationFrame(syncPermissionSets)
+    }
   }, [setsQuery.data])
 
   const createSetMutation = useMutation({
@@ -231,8 +226,8 @@ export default function PermissionSets() {
         id: activeSet.id,
         permissions: activeSet.permissions,
       })
-    } catch (e: any) {
-      alert(e.message)
+    } catch (error: unknown) {
+      alert(toErrorMessage(error))
     }
   }
 
@@ -264,8 +259,8 @@ export default function PermissionSets() {
 
     try {
       await deleteSetMutation.mutateAsync(activeSet.id)
-    } catch (e: any) {
-      alert(e.message)
+    } catch (error: unknown) {
+      alert(toErrorMessage(error))
     }
   }
 

@@ -1,8 +1,27 @@
 import { useState } from "react"
 
+interface DraftMember {
+  id: string
+  name: string
+  email: string
+  level: string
+  permissionSet: string
+  status: "ACTIVE"
+}
+
 interface Props {
   onClose: () => void
-  onAdd: (member: any) => void
+  onAdd: (member: DraftMember) => void
+}
+
+interface InputProps {
+  label: string
+  value: string
+  onChange: (value: string) => void
+}
+
+interface SelectProps extends InputProps {
+  options: string[]
 }
 
 export default function AddMemberModal({ onClose, onAdd }: Props) {
@@ -61,7 +80,7 @@ export default function AddMemberModal({ onClose, onAdd }: Props) {
   )
 }
 
-function Input({ label, value, onChange }: any) {
+function Input({ label, value, onChange }: InputProps) {
   return (
     <div className="space-y-1">
       <label className="text-sm text-[var(--text-muted)]">{label}</label>
@@ -74,7 +93,7 @@ function Input({ label, value, onChange }: any) {
   )
 }
 
-function Select({ label, value, onChange, options }: any) {
+function Select({ label, value, onChange, options }: SelectProps) {
   return (
     <div className="space-y-1">
       <label className="text-sm text-[var(--text-muted)]">{label}</label>

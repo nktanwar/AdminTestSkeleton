@@ -12,6 +12,11 @@ import {
 } from "../lib/api"
 import { useAuth } from "../context/AuthContext"
 
+function toErrorMessage(error: unknown): string {
+  if (error instanceof Error) return error.message
+  return "Unable to create funnel"
+}
+
 export default function CreateFunnel() {
   const navigate = useNavigate()
   const queryClient = useQueryClient()
@@ -73,11 +78,11 @@ export default function CreateFunnel() {
       })
 
       navigate(`/channels/${channelId}/funnels`)
-    } catch (e: any) {
-      if (e instanceof ApiError && e.status === 403) {
+    } catch (error: unknown) {
+      if (error instanceof ApiError && error.status === 403) {
         setError("Not authorized to create funnel")
       } else {
-        setError(e.message)
+        setError(toErrorMessage(error))
       }
     } finally {
       setLoading(false)
