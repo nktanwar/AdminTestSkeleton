@@ -1,0 +1,12 @@
+{
+  "$schema": "https://openapi.vercel.sh/vercel.json",
+  "installCommand": "cd cis-admin-ui && npm install",
+  "buildCommand": "cd cis-admin-ui && npm run build",
+  "outputDirectory": "cis-admin-ui/dist",
+  "rewrites": [
+    {
+      "source": "/(.*)",
+      "destination": "/index.html"
+    }
+  ]
+}
