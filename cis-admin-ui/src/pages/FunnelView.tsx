@@ -1,5 +1,4 @@
 import {
-  useEffect,
   useMemo,
   useState,
   type FormEvent,
@@ -282,33 +281,6 @@ export default function FunnelView() {
     filteredLeads.every((lead) =>
       validSelectedLeadIds.includes(lead.id)
     )
-
-  useEffect(() => {
-    if (!import.meta.env.DEV) {
-      return
-    }
-
-    console.debug("[FunnelView leadsQuery state]", {
-      channelId,
-      funnelId: id,
-      isLoading: leadsQuery.isLoading,
-      isFetching: leadsQuery.isFetching,
-      isError: leadsQuery.isError,
-      leadCount: leadsQuery.data?.length ?? 0,
-      error:
-        leadsQuery.error instanceof Error
-          ? leadsQuery.error.message
-          : leadsQuery.error ?? null,
-    })
-  }, [
-    channelId,
-    id,
-    leadsQuery.isLoading,
-    leadsQuery.isFetching,
-    leadsQuery.isError,
-    leadsQuery.data,
-    leadsQuery.error,
-  ])
 
   function toggleLeadSelection(leadId: string): void {
     setSelectedLeadIds((current) =>

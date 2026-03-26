@@ -469,9 +469,6 @@ export function AuthProvider({
 export function useAuth() {
   const ctx = useContext(AuthContext)
   if (!ctx) {
-    console.error(
-      "useAuth was used without AuthProvider. Falling back to unauthenticated context."
-    )
     return FALLBACK_AUTH_CONTEXT
   }
   return ctx

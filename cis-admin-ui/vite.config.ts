@@ -2,6 +2,8 @@ import { defineConfig } from "vite"
 import react from "@vitejs/plugin-react"
 import tailwindcss from "@tailwindcss/vite"
 
+const API_TARGET = "http://3.7.55.240:8082"
+
 export default defineConfig({
   plugins: [
     react(),
@@ -9,10 +11,10 @@ export default defineConfig({
   ],
   server: {
     proxy: {
-      "/auth": "http://localhost:8082",
-      "/internal": "http://localhost:8082",
-      "/api": "http://localhost:8082",
-      "/lead": "http://localhost:8082",
+      "/auth": API_TARGET,
+      "/internal": API_TARGET,
+      "/api": API_TARGET,
+      "/lead": API_TARGET,
     },
   },
 })

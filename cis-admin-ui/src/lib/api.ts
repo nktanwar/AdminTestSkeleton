@@ -20,8 +20,9 @@ function sanitizeBaseUrl(rawBaseUrl: string): string {
 const RAW_BASE_URL = sanitizeBaseUrl(
   import.meta.env.VITE_API_BASE_URL ?? ""
 )
+const DEFAULT_API_BASE_URL = "http://3.7.55.240:8082"
 const BASE_URL =
-  RAW_BASE_URL || (import.meta.env.DEV ? "http://localhost:8082" : "")
+  RAW_BASE_URL || DEFAULT_API_BASE_URL
 
 function isAbsoluteUrl(value: string): boolean {
   return /^https?:\/\//i.test(value)
@@ -59,40 +60,6 @@ function joinBaseAndPath(base: string, path: string): string {
 
 function resolveApiUrl(path: string): string {
   return joinBaseAndPath(BASE_URL, path)
-}
-
-function redactAuthorizationHeader(value: string): string {
-  const trimmed = value.trim()
-  if (!trimmed) {
-    return trimmed
-  }
-
-  const bearerPrefix = /^Bearer\s+/i
-  if (!bearerPrefix.test(trimmed)) {
-    return trimmed
-  }
-
-  const token = trimmed.replace(bearerPrefix, "")
-  if (token.length <= 12) {
-    return "Bearer [redacted]"
-  }
-
-  return `Bearer ${token.slice(0, 8)}...[redacted]...${token.slice(-4)}`
-}
-
-function toDebugHeaders(
-  headers: HeadersInit | undefined
-): Record<string, string> {
-  const normalized = new Headers(headers)
-  const entries = Object.fromEntries(normalized.entries())
-
-  if (entries.Authorization) {
-    entries.Authorization = redactAuthorizationHeader(
-      entries.Authorization
-    )
-  }
-
-  return entries
 }
 
 export class ApiError extends Error {
@@ -170,47 +137,16 @@ async function api<T>(
 ): Promise<T> {
   const token = getToken()
   const requestUrl = resolveApiUrl(path)
-  const shouldDebugLeadRequest =
-    import.meta.env.DEV && path.startsWith("/lead/")
   const requestHeaders: HeadersInit = {
     "Content-Type": "application/json",
     ...(token ? { Authorization: `Bearer ${token}` } : {}),
     ...(options.headers || {}),
-  }
-  const requestMethod = options.method ?? "GET"
-
-  if (shouldDebugLeadRequest) {
-    console.groupCollapsed(
-      `[LeadAPI request] ${requestMethod} ${path}`
-    )
-    console.debug("baseUrl", BASE_URL)
-    console.debug("requestUrl", requestUrl)
-    console.debug("method", requestMethod)
-    console.debug("headers", toDebugHeaders(requestHeaders))
-    console.debug("body", options.body ?? null)
-    console.groupEnd()
   }
 
   const res = await fetch(requestUrl, {
     ...options,
     headers: requestHeaders,
   })
-
-  let debugResponseText: string | null = null
-  if (shouldDebugLeadRequest) {
-    debugResponseText = await res.clone().text()
-    console.groupCollapsed(
-      `[LeadAPI response] ${requestMethod} ${path}`
-    )
-    console.debug("status", res.status)
-    console.debug("ok", res.ok)
-    console.debug(
-      "headers",
-      Object.fromEntries(res.headers.entries())
-    )
-    console.debug("rawBody", debugResponseText || null)
-    console.groupEnd()
-  }
 
   if (!res.ok) {
     const text = await res.text()
@@ -234,14 +170,7 @@ async function api<T>(
 
   const contentType = res.headers.get("content-type") ?? ""
   if (contentType.includes("application/json")) {
-    const parsed = await res.json()
-    if (shouldDebugLeadRequest) {
-      console.debug(
-        `[LeadAPI parsed json] ${requestMethod} ${path}`,
-        parsed
-      )
-    }
-    return parsed
+    return await res.json()
   }
 
   const text = await res.text()
@@ -920,46 +849,12 @@ export const LeadAPI = {
     const raw = await api<unknown>(
       `/lead/${channelId}/my-leads`
     )
-    const normalized = normalizeLeadListResponse(raw)
-
-    if (import.meta.env.DEV) {
-      console.debug("[LeadAPI myLeads] raw + normalized", {
-        channelId,
-        raw,
-        normalizedCount: normalized.length,
-      })
-    }
-
-    return normalized
+    return normalizeLeadListResponse(raw)
   },
 
   list: async (channelId: string, funnelId: string) => {
     const raw = await api<unknown>(`/lead/${channelId}/${funnelId}`)
-    const normalized = normalizeLeadListResponse(raw)
-
-    if (import.meta.env.DEV) {
-      console.debug("[LeadAPI list] raw + normalized", {
-        channelId,
-        funnelId,
-        raw,
-        normalizedCount: normalized.length,
-        firstLeadId: normalized[0]?.id ?? null,
-        firstLeadBackendId: normalized[0]?.backendId ?? null,
-        firstLead: normalized[0]?.raw ?? null,
-      })
-      if (normalized.length === 0) {
-        console.warn(
-          "[LeadAPI list] No leads after normalization. Check response shape.",
-          {
-            channelId,
-            funnelId,
-            raw,
-          }
-        )
-      }
-    }
-
-    return normalized
+    return normalizeLeadListResponse(raw)
   },
 
   create: (
