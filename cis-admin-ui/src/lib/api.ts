@@ -20,7 +20,7 @@ function sanitizeBaseUrl(rawBaseUrl: string): string {
 const RAW_BASE_URL = sanitizeBaseUrl(
   import.meta.env.VITE_API_BASE_URL ?? ""
 )
-const DEFAULT_API_BASE_URL = "http://3.7.55.240:8082"
+const DEFAULT_API_BASE_URL = "/internal"
 const BASE_URL =
   RAW_BASE_URL || DEFAULT_API_BASE_URL
 
@@ -58,7 +58,11 @@ function joinBaseAndPath(base: string, path: string): string {
   return normalizedBase + normalizedPath
 }
 
-function resolveApiUrl(path: string): string {
+function resolveApiUrl(
+  path: string,
+  useBaseUrl = true
+): string {
+  if (!useBaseUrl) return path
   return joinBaseAndPath(BASE_URL, path)
 }
 
@@ -133,10 +137,14 @@ function parseErrorMessage(body: string): string | null {
 
 async function api<T>(
   path: string,
-  options: RequestInit = {}
+  options: RequestInit = {},
+  config: { useBaseUrl?: boolean } = {}
 ): Promise<T> {
   const token = getToken()
-  const requestUrl = resolveApiUrl(path)
+  const requestUrl = resolveApiUrl(
+    path,
+    config.useBaseUrl ?? true
+  )
   const requestHeaders: HeadersInit = {
     "Content-Type": "application/json",
     ...(token ? { Authorization: `Bearer ${token}` } : {}),
@@ -847,13 +855,15 @@ function normalizeLeadListResponse(raw: unknown): Lead[] {
 export const LeadAPI = {
   myLeads: async (channelId: string) => {
     const raw = await api<unknown>(
-      `/lead/${channelId}/my-leads`
+      `/internal/channels/${channelId}/leads/my-leads`
     )
     return normalizeLeadListResponse(raw)
   },
 
   list: async (channelId: string, funnelId: string) => {
-    const raw = await api<unknown>(`/lead/${channelId}/${funnelId}`)
+    const raw = await api<unknown>(
+      `/internal/channels/${channelId}/leads/funnel/${funnelId}`
+    )
     return normalizeLeadListResponse(raw)
   },
 
@@ -861,17 +871,20 @@ export const LeadAPI = {
     channelId: string,
     payload: CreateLeadPayload
   ) =>
-    api<void | Lead>(`/lead/${channelId}/create`, {
-      method: "POST",
-      body: JSON.stringify(payload),
-    }),
+    api<void | Lead>(
+      `/internal/channels/${channelId}/leads`,
+      {
+        method: "POST",
+        body: JSON.stringify(payload),
+      }
+    ),
 
   assign: (
     channelId: string,
     payload: AssignLeadsPayload
   ) =>
     api<AssignLeadsResponse | void>(
-      `/lead/${channelId}/assign`,
+      `/internal/channels/${channelId}/leads/assign`,
       {
         method: "POST",
         body: JSON.stringify(payload),
@@ -883,7 +896,7 @@ export const LeadAPI = {
     payload: MoveLeadStagePayload
   ) =>
     api<MoveLeadStageResponse>(
-      `/lead/${channelId}/moveStage`,
+      `/internal/channels/${channelId}/leads/moveStage`,
       {
         method: "POST",
         body: JSON.stringify(payload),
