@@ -1,4 +1,5 @@
 import { useState } from "react"
+import { useNavigate } from "react-router-dom"
 import { getTheme, setTheme } from "../lib/theme"
 import { useAuth } from "../context/AuthContext"
 
@@ -13,6 +14,7 @@ export default function Login() {
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [theme, setLocalTheme] = useState(getTheme())
+  const navigate = useNavigate()
   const { login } = useAuth()
 
   function toggleTheme() {
@@ -36,7 +38,13 @@ export default function Login() {
     setError(null)
 
     try {
-      await login(email.trim(), password)
+      const role = await login(email.trim(), password)
+      navigate(
+        role === "ADMIN"
+          ? "/admin/dashboard"
+          : "/dealer/dashboard",
+        { replace: true }
+      )
     } catch (error: unknown) {
       setError(toErrorMessage(error))
     } finally {
@@ -62,18 +70,18 @@ export default function Login() {
               <div className="text-xs uppercase tracking-[0.2em] text-[var(--text-muted)]">
                 Company Internal Service
               </div>
-              <h1 className="text-3xl leading-tight">Alisan CRM Admin</h1>
+              <h1 className="text-3xl leading-tight">Allison Homes Console</h1>
               <p className="text-sm text-[var(--text-muted)] max-w-sm">
-                Manage channels, members, permissions, and funnels from one
-                secure admin workspace.
+                Sign in to the protected internal workspace for admin and staff
+                operations.
               </p>
             </div>
             <div className="mt-8 flex gap-2 flex-wrap">
               <span className="text-xs bg-[var(--accent-soft)] text-[var(--accent)] px-3 py-1 rounded-full">
-                OWNER VIEW
+                JWT AUTH
               </span>
               <span className="text-xs bg-[var(--accent-soft)] text-[var(--accent)] px-3 py-1 rounded-full">
-                CRM
+                ADMIN + STAFF
               </span>
             </div>
           </section>
@@ -92,13 +100,13 @@ export default function Login() {
               </label>
               <input
                 type="email"
-                placeholder="admin@alisan.com"
+                placeholder="admin@company.com"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 onKeyDown={(e) => {
                   if (e.key === "Enter") submit()
                 }}
-                className="w-full px-3 py-2 rounded-lg bg-zinc-800 border border-[var(--border)] focus:outline-none focus:ring-2 focus:ring-[var(--accent-soft)]"
+                className="w-full px-3 py-2 rounded-lg bg-[var(--bg-panel)] border border-[var(--border)] focus:outline-none focus:ring-2 focus:ring-[var(--accent-soft)]"
               />
 
               <label className="block text-sm font-semibold mt-4 mb-2">
@@ -112,7 +120,7 @@ export default function Login() {
                 onKeyDown={(e) => {
                   if (e.key === "Enter") submit()
                 }}
-                className="w-full px-3 py-2 rounded-lg bg-zinc-800 border border-[var(--border)] focus:outline-none focus:ring-2 focus:ring-[var(--accent-soft)]"
+                className="w-full px-3 py-2 rounded-lg bg-[var(--bg-panel)] border border-[var(--border)] focus:outline-none focus:ring-2 focus:ring-[var(--accent-soft)]"
               />
 
               {error && (

@@ -1,5 +1,4 @@
 import {
-  useQuery,
   useQueryClient,
 } from "@tanstack/react-query"
 import {
@@ -11,12 +10,7 @@ import {
   useState,
   type ReactNode,
 } from "react"
-import {
-  AuthAPI,
-  ChannelAPI,
-  type ChannelCapabilities,
-  type ChannelMe,
-} from "../lib/api"
+import { AuthAPI, type ChannelCapabilities, type ChannelMe } from "../lib/api"
 import {
   type AuthMembership,
   clearAuthState,
@@ -26,7 +20,6 @@ import {
   getUserId,
   isLoggedIn,
   onAuthChange,
-  setPendingAuthSession,
   setSelectedChannelContext,
   setSelectedMembershipContext,
   setToken,
@@ -49,13 +42,16 @@ interface AuthContextValue {
   memberships: AuthMembership[]
   selectedMembershipId: string | null
   selectedChannelId: string | null
-  globalRole: "ADMIN" | "USER" | null
+  globalRole: "ADMIN" | "STANDARD" | "DEALER" | null
   isAdmin: boolean
   permissions: string[]
   channelMe: ChannelMe | null
   capabilities: ChannelCapabilities
   capabilitiesLoading: boolean
-  login: (email: string, password: string) => Promise<void>
+  login: (
+    email: string,
+    password: string
+  ) => Promise<"ADMIN" | "STANDARD" | "DEALER">
   selectMembership: (membershipId: string) => Promise<void>
   selectChannel: (channelId: string) => void
   logout: () => void
@@ -91,7 +87,7 @@ const FALLBACK_AUTH_CONTEXT: AuthContextValue = {
   channelMe: null,
   capabilities: EMPTY_CAPABILITIES,
   capabilitiesLoading: false,
-  login: async () => {},
+  login: async () => "STANDARD",
   selectMembership: async () => {},
   selectChannel: () => {},
   logout: () => {},
@@ -100,8 +96,12 @@ const FALLBACK_AUTH_CONTEXT: AuthContextValue = {
 
 function normalizeGlobalRole(
   value: string | null | undefined
-): "ADMIN" | "USER" | null {
-  if (value === "ADMIN" || value === "USER") {
+): "ADMIN" | "STANDARD" | "DEALER" | null {
+  if (
+    value === "ADMIN" ||
+    value === "STANDARD" ||
+    value === "DEALER"
+  ) {
     return value
   }
   return null
@@ -109,7 +109,7 @@ function normalizeGlobalRole(
 
 function resolveRoleFromActor(
   actor: DecodedActor | null
-): "ADMIN" | "USER" | null {
+): "ADMIN" | "STANDARD" | "DEALER" | null {
   if (!actor) return null
 
   const claimRole = normalizeGlobalRole(
@@ -122,51 +122,7 @@ function resolveRoleFromActor(
   if (actor.isAdmin === true) return "ADMIN"
   if (actor.type === "ADMIN") return "ADMIN"
 
-  return "USER"
-}
-
-function normalizeMemberships(
-  memberships:
-    | {
-    membershipId: string
-    channel?: {
-      id: string
-      name: string
-    }
-    channelId?: string
-    role?: string
-  }[]
-    | null
-    | undefined
-): AuthMembership[] {
-  if (!Array.isArray(memberships)) return []
-
-  return memberships.flatMap((membership) => {
-    if (membership.channel?.id) {
-      return [
-        {
-          membershipId: membership.membershipId,
-          channel: {
-            id: membership.channel.id,
-            name: membership.channel.name,
-          },
-          role: membership.role,
-        },
-      ]
-    }
-
-    if (membership.channelId) {
-      return [
-        {
-          membershipId: membership.membershipId,
-          channel: { id: membership.channelId },
-          role: membership.role,
-        },
-      ]
-    }
-
-    return []
-  })
+  return "STANDARD"
 }
 
 export function AuthProvider({
@@ -189,7 +145,7 @@ export function AuthProvider({
     string | null
   >(null)
   const [globalRole, setGlobalRole] = useState<
-    "ADMIN" | "USER" | null
+    "ADMIN" | "STANDARD" | "DEALER" | null
   >(null)
   const [permissions, setPermissions] = useState<string[]>([])
 
@@ -197,24 +153,9 @@ export function AuthProvider({
   const tokenIsAdmin =
     actorRole === "ADMIN" || globalRole === "ADMIN"
 
-  const channelMeQuery = useQuery({
-    queryKey: ["channelMe", selectedChannelId],
-    queryFn: () => ChannelAPI.me(selectedChannelId!),
-    enabled:
-      status === "authenticated" &&
-      !!selectedChannelId &&
-      !tokenIsAdmin,
-    staleTime: Number.POSITIVE_INFINITY,
-    gcTime: Number.POSITIVE_INFINITY,
-    retry: false,
-  })
-
   const effectiveCapabilities: ChannelCapabilities = tokenIsAdmin
     ? FULL_CAPABILITIES
-    : channelMeQuery.data?.isAdmin
-      ? FULL_CAPABILITIES
-      : channelMeQuery.data?.capabilities ??
-        EMPTY_CAPABILITIES
+    : EMPTY_CAPABILITIES
 
   const refreshSession = useCallback(async () => {
     if (!isLoggedIn()) {
@@ -251,6 +192,19 @@ export function AuthProvider({
     }
 
     const nextActor = getActorFromToken()
+    if (!nextActor) {
+      clearAuthState()
+      setActor(null)
+      setUserId(null)
+      setMemberships([])
+      setSelectedMembershipId(null)
+      setSelectedChannelId(null)
+      setGlobalRole(null)
+      setPermissions([])
+      setStatus("unauthenticated")
+      return false
+    }
+
     const nextRole = resolveRoleFromActor(nextActor)
     setActor(nextActor)
     setPermissions(nextActor?.permissionCodes ?? [])
@@ -272,12 +226,6 @@ export function AuthProvider({
           ? [{ membershipId, channel: { id: channelId } }]
           : []
     setMemberships(effectiveMemberships)
-    if (nextActor?.sub) {
-      setPendingAuthSession(
-        nextActor.sub,
-        effectiveMemberships
-      )
-    }
 
     setSelectedMembershipId(membershipId)
     setSelectedChannelId(channelId)
@@ -290,88 +238,35 @@ export function AuthProvider({
       // Prevent cross-user data bleed from previous query cache.
       queryClient.clear()
 
-      const res = await AuthAPI.login(
-        email.trim(),
-        password
-      )
-      const normalizedMemberships = normalizeMemberships(
-        res.memberships
-      )
-      setPendingAuthSession(res.userId, normalizedMemberships)
-      setUserId(res.userId)
-      setMemberships(normalizedMemberships)
+      clearAuthState()
+      const res = await AuthAPI.login(email.trim(), password)
+      setToken(res.token)
+      const ok = await refreshSession()
+      if (!ok) {
+        throw new Error("Login failed: session validation failed.")
+      }
+
+      const nextRole =
+        resolveRoleFromActor(getActorFromToken()) ?? "STANDARD"
+      setUserId(getActorFromToken()?.sub ?? null)
+      setMemberships([])
       setSelectedMembershipId(null)
       setSelectedChannelId(null)
-      const normalizedRole = normalizeGlobalRole(
-        res.globalRole
-      )
-      setGlobalRole(normalizedRole)
-      setPermissions([])
-      setActor(null)
-
-      const loginToken = res.adminToken ?? res.token ?? null
-      if (loginToken) {
-        setToken(loginToken)
-        const ok = await refreshSession()
-        if (!ok) {
-          throw new Error("Login failed: session validation failed.")
-        }
-        return
-      }
-
-      if (normalizedMemberships.length === 0) {
-        throw new Error("No memberships available for this user.")
-      }
-
-      const firstMembership = normalizedMemberships[0]
-      const tokenRes = await AuthAPI.selectMembership(
-        res.userId,
-        firstMembership.membershipId
-      )
-      setSelectedMembershipContext(
-        firstMembership.membershipId,
-        firstMembership.channel.id
-      )
-      setToken(tokenRes.token)
-      await refreshSession()
+      return nextRole
     },
     [queryClient, refreshSession]
   )
 
   const selectMembership = useCallback(
     async (membershipId: string) => {
-      if (!userId) {
-        throw new Error(
-          "Missing user session. Please login again."
-        )
-      }
+      const membership = memberships.find((m) => m.membershipId === membershipId)
+      if (!membership) return
 
-      const membership = memberships.find(
-        (m) => m.membershipId === membershipId
-      )
-      if (!membership) {
-        throw new Error("Invalid membership selection.")
-      }
-
-      const res = await AuthAPI.selectMembership(
-        userId,
-        membershipId
-      )
-
-      setSelectedMembershipContext(
-        membership.membershipId,
-        membership.channel.id
-      )
-      setToken(res.token)
-
-      const ok = await refreshSession()
-      if (!ok) {
-        throw new Error(
-          "Membership selection failed: session validation failed."
-        )
-      }
+      setSelectedMembershipContext(membership.membershipId, membership.channel.id)
+      setSelectedMembershipId(membership.membershipId)
+      setSelectedChannelId(membership.channel.id)
     },
-    [userId, memberships, refreshSession]
+    [memberships]
   )
 
   const selectChannel = useCallback((channelId: string) => {
@@ -427,10 +322,9 @@ export function AuthProvider({
       globalRole,
       isAdmin: tokenIsAdmin,
       permissions,
-      channelMe: channelMeQuery.data ?? null,
+      channelMe: null,
       capabilities: effectiveCapabilities,
-      capabilitiesLoading:
-        !tokenIsAdmin && channelMeQuery.isLoading,
+      capabilitiesLoading: false,
       login,
       selectMembership,
       selectChannel,
@@ -447,8 +341,6 @@ export function AuthProvider({
       globalRole,
       tokenIsAdmin,
       permissions,
-      channelMeQuery.data,
-      channelMeQuery.isLoading,
       effectiveCapabilities,
       login,
       selectMembership,

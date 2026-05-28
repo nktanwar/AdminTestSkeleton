@@ -160,8 +160,8 @@ async function api<T>(
     const text = await res.text()
     if (res.status === 401) {
       clearAuthState()
-      if (window.location.pathname !== "/login") {
-        window.location.replace("/login")
+      if (window.location.hash !== "#/login") {
+        window.location.replace("/#/login")
       }
     }
     throw new ApiError(
@@ -266,11 +266,137 @@ export interface DashboardResponse {
   dealerCount: number
 }
 
+export interface AdminDashboardSummary {
+  totalUsers: number
+  totalChannels: number
+  activeChannels: number
+  totalKnowledgeCenters: number
+  activeKnowledgeCenters: number
+  totalKnowledgeItems: number
+  totalLeads: number
+  activeLeads: number
+  closedLeads: number
+}
+
+export interface DealerDashboardSummary {
+  assignedLeads: number
+  activeLeads: number
+  closedLeads: number
+  accessibleChannels: number
+  accessibleKnowledgeCenters: number
+  conversionRate: number
+}
+
+export interface DealerChannel {
+  id: string
+  name: string
+  code: string
+  status: "ACTIVE" | "INACTIVE" | string
+  walletEnabled: boolean
+  knowledgeCenterAccess: boolean
+}
+
+export interface DealerKnowledgeCenter {
+  id: string
+  name: string
+  description?: string | null
+  status: "ACTIVE" | "INACTIVE" | string
+  createdAt: string
+}
+
+export interface DealerLeadStageHistoryItem {
+  from?: string | null
+  to?: string | null
+  changedAt?: string | null
+  changedByName?: string | null
+  comment?: string | null
+  [key: string]: unknown
+}
+
+export interface DealerLeadEvent {
+  type?: string | null
+  createdAt?: string | null
+  message?: string | null
+  note?: string | null
+  [key: string]: unknown
+}
+
+export interface DealerLead {
+  id: string
+  ownerName: string
+  stage: string
+  status: string
+  source: string
+  customerSnapshot: {
+    name: string
+    phone: string
+    email: string | null
+  }
+  createdAt: string
+  creatorName: string
+  closedAt: string | null
+  stageHistory: DealerLeadStageHistoryItem[]
+  events: DealerLeadEvent[]
+}
+
+export interface UpdateDealerLeadStagePayload {
+  stage: string
+  comment?: string
+}
+
+export interface CreateUserPayload {
+  name: string
+  email: string
+  phone?: string
+  password: string
+  role: "ADMIN" | "STANDARD" | "DEALER"
+}
+
+export interface CreatedUserResponse {
+  id: string
+  name: string
+  email: string
+  password: string
+  phone?: string
+}
+
 export const DashboardAPI = {
   get: (channelId: string) =>
     api<DashboardResponse>(
       "/internal/channels/" + channelId + "/dashboard"
     ),
+}
+
+export const AdminAPI = {
+  getDashboardSummary: () =>
+    api<AdminDashboardSummary>("/api/admin/dashboard/summary"),
+}
+
+export const DealerAPI = {
+  getDashboardSummary: () =>
+    api<DealerDashboardSummary>("/api/dealer/dashboard/summary"),
+
+  listChannels: () =>
+    api<DealerChannel[]>("/api/dealer/dashboard/channels"),
+
+  listKnowledgeCenters: () =>
+    api<DealerKnowledgeCenter[]>(
+      "/api/dealer/dashboard/knowledge-centers"
+    ),
+
+  listLeads: () => api<DealerLead[]>("/api/dealer/leads"),
+
+  getLead: (leadId: string) =>
+    api<DealerLead>(`/api/dealer/leads/${leadId}`),
+
+  updateLeadStage: (
+    leadId: string,
+    payload: UpdateDealerLeadStagePayload
+  ) =>
+    api<DealerLead>(`/api/dealer/leads/${leadId}/stage`, {
+      method: "PATCH",
+      body: JSON.stringify(payload),
+    }),
 }
 
 
@@ -279,34 +405,16 @@ export const DashboardAPI = {
 export const AuthAPI = {
   login: (email: string, password: string) =>
     api<{
-      userId: string
-      globalRole: string
-      token?: string | null
-      adminToken?: string | null
-      memberships?: {
-        membershipId: string
-        role?: string
-        channel?: {
-          id: string
-          name: string
-        }
-        channelId?: string
-      }[] | null
+      token: string
     }>("/auth/login", {
       method: "POST",
       body: JSON.stringify({ email, password }),
     }),
 
-  selectMembership: (
-    userId: string,
-    membershipId: string
-  ) =>
-    api<{ token: string }>("/auth/select-membership", {
+  createUser: (payload: CreateUserPayload) =>
+    api<CreatedUserResponse>("/auth/create-user", {
       method: "POST",
-      body: JSON.stringify({
-        userId,
-        membershipId,
-      }),
+      body: JSON.stringify(payload),
     }),
 
   // Session check used at app bootstrap. If API is unreachable or auth is invalid,
@@ -316,20 +424,6 @@ export const AuthAPI = {
     if (!token) return false
 
     try {
-      const res = await fetch(
-        resolveApiUrl("/internal/channels"),
-        {
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
-        },
-      )
-
-      if (!res.ok) {
-        clearAuthState()
-        return false
-      }
-
       return true
     } catch {
       clearAuthState()

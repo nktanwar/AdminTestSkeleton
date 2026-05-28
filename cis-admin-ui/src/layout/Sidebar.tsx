@@ -45,38 +45,38 @@ function getAvatarInitials(value: string): string {
 }
 
 export default function Sidebar() {
-  const {
-    actor,
-    capabilities,
-    memberships,
-    selectedMembershipId,
-  } = useAuth()
-  const selectedMembership =
-    memberships.find(
-      (membership) =>
-        membership.membershipId === selectedMembershipId
-    ) ?? null
+  const { actor, isAdmin } = useAuth()
   const displayTitle = getDisplayTitle(
     actor?.globalRole,
-    selectedMembership?.role ?? null,
+    null,
     actor?.type
   )
   const avatarInitials = getAvatarInitials(displayTitle)
-  const links = [
-    { name: "Dashboard", to: "/" },
-    { name: "Channels", to: "/channels" },
-    ...(capabilities.canManagePermissions
-      ? [{ name: "Permission Sets", to: "/permissions" }]
-      : []),
-  ]
+  const links = isAdmin
+    ? [
+        { name: "Dashboard", to: "/admin/dashboard" },
+        { name: "Users", to: "/admin/users" },
+        { name: "Channel Dashboard", to: "/dashboard" },
+        { name: "Channels", to: "/channels" },
+        { name: "Permission Sets", to: "/permissions" },
+      ]
+    : [
+        { name: "Dashboard", to: "/dealer/dashboard" },
+        { name: "Channels", to: "/dealer/channels" },
+        {
+          name: "Knowledge Centers",
+          to: "/dealer/knowledge-centers",
+        },
+        { name: "Leads", to: "/dealer/leads" },
+      ]
 
   return (
     <aside className="w-64 bg-[var(--bg-panel)] border-r border-[var(--border)] p-5 shadow-[var(--shadow-panel)] flex flex-col">
       <div className="mb-6">
         <div className="text-xs uppercase tracking-[0.2em] text-[var(--text-muted)]">
-          Cis Admin
+          Allison Homes
         </div>
-        <h1 className="text-xl font-bold mt-1">Alisan CRM</h1>
+        <h1 className="text-xl font-bold mt-1">Internal Console</h1>
       </div>
 
       <nav className="space-y-2 flex-1">
