@@ -1,6 +1,7 @@
 // src/lib/api.ts
 
 import type { Channel } from "../types/channel"
+import type { DealerProduct } from "./productApi"
 import { clearAuthState, getToken } from "./auth"
 
 function sanitizeBaseUrl(rawBaseUrl: string): string {
@@ -304,6 +305,53 @@ export interface DealerKnowledgeCenter {
   createdAt: string
 }
 
+export interface KnowledgeCenter {
+  id: string
+  name: string
+  description?: string | null
+  status: "ACTIVE" | "INACTIVE" | string
+  createdAt: string
+  createdBy?: string | null
+}
+
+export type KnowledgeItemType =
+  | "ARTICLE"
+  | "VIDEO"
+  | "LINK"
+  | "DOCUMENT"
+
+export interface KnowledgeItem {
+  id: string
+  knowledgeCenterId: string
+  title: string
+  description?: string | null
+  type: KnowledgeItemType
+  content: string
+  tags: string[]
+  isPublished: boolean
+  createdAt: string
+  createdBy?: string | null
+  updatedAt?: string | null
+}
+
+export interface CreateKnowledgeCenterPayload {
+  name: string
+  description?: string
+}
+
+export interface CreateKnowledgeItemPayload {
+  title: string
+  description?: string
+  type: KnowledgeItemType
+  content: string
+  tags?: string[]
+}
+
+export interface UpdateKnowledgeItemPayload
+  extends CreateKnowledgeItemPayload {
+  isPublished: boolean
+}
+
 export interface DealerLeadStageHistoryItem {
   from?: string | null
   to?: string | null
@@ -360,6 +408,90 @@ export interface CreatedUserResponse {
   phone?: string
 }
 
+export interface DealerProductPricing {
+  productId: string
+  dealerPrice: number
+  customerPrice: number
+  margin: number
+  marginPercent: number
+}
+
+export type ChannelPricingType = "FIXED" | "PER_UNIT" | "AREA"
+
+export interface ChannelPricingOptionResponse {
+  optionId: string
+  optionLabel: string
+  pricingType: ChannelPricingType
+  dealerPrice?: number
+  customerPrice?: number
+  dealerRate?: number
+  customerRate?: number
+  configured: boolean
+}
+
+export interface ChannelPricingQuestionResponse {
+  questionId: string
+  questionText: string
+  questionType: string
+  options: ChannelPricingOptionResponse[]
+}
+
+export interface ChannelProductConfigurationPricingResponse {
+  productId: string
+  productName: string
+  configurationId: string
+  configurationVersion: number
+  questions: ChannelPricingQuestionResponse[]
+}
+
+export interface DealerCheckoutAnswerRequest {
+  questionId: string
+  optionId?: string
+  value?: number
+  areaValue?: {
+    length: number
+    width: number
+  }
+}
+
+export interface DealerCheckoutItemRequest {
+  productId: string
+  quantity: number
+  configurationId?: string
+  configurationVersion?: number
+  answers?: DealerCheckoutAnswerRequest[]
+}
+
+export interface DealerCheckoutRequest {
+  discountPercent?: number
+  items: DealerCheckoutItemRequest[]
+}
+
+export interface DealerCheckoutResponseItem {
+  productId: string
+  quantity: number
+  dealerUnitPrice: number
+  customerUnitPrice: number
+  dealerTotal: number
+  customerTotal: number
+  margin: number
+  finalCustomerTotal: number
+}
+
+export interface DealerCheckoutResponse {
+  items: DealerCheckoutResponseItem[]
+  totalDealerCost: number
+  totalCustomerPrice: number
+  totalMargin: number
+  discountPercent: number
+  discountAmount: number
+  finalCustomerTotal: number
+  finalMargin: number
+}
+
+export type DealerDashboardProduct = DealerProduct &
+  Partial<DealerProductPricing>
+
 export const DashboardAPI = {
   get: (channelId: string) =>
     api<DashboardResponse>(
@@ -396,6 +528,107 @@ export const DealerAPI = {
     api<DealerLead>(`/api/dealer/leads/${leadId}/stage`, {
       method: "PATCH",
       body: JSON.stringify(payload),
+    }),
+
+  listChannelPricing: (channelId: string) =>
+    api<DealerProductPricing[]>(
+      `/api/dealer/channels/${channelId}/pricing`
+    ),
+
+  getChannelProductPricing: (
+    channelId: string,
+    productId: string
+  ) =>
+    api<DealerProductPricing>(
+      `/api/dealer/channels/${channelId}/pricing/products/${productId}`
+    ),
+
+  getChannelProductConfigurationPricing: (
+    channelId: string,
+    productId: string,
+    configurationId: string
+  ) =>
+    api<ChannelProductConfigurationPricingResponse>(
+      `/api/dealer/channels/${channelId}/pricing/products/${productId}/configurations/${configurationId}`
+    ),
+
+  checkout: (channelId: string, payload: DealerCheckoutRequest) =>
+    api<DealerCheckoutResponse>(`/api/dealer/channels/${channelId}/checkout`, {
+      method: "POST",
+      body: JSON.stringify(payload),
+    }),
+}
+
+export const KnowledgeCenterAPI = {
+  create: (payload: CreateKnowledgeCenterPayload) =>
+    api<KnowledgeCenter>("/api/knowledge-centers", {
+      method: "POST",
+      body: JSON.stringify(payload),
+    }),
+
+  listMine: () =>
+    api<KnowledgeCenter[]>("/api/knowledge-centers/me"),
+
+  get: (knowledgeCenterId: string) =>
+    api<KnowledgeCenter>(
+      `/api/knowledge-centers/${knowledgeCenterId}`
+    ),
+
+  addUserAccess: (
+    knowledgeCenterId: string,
+    payload: { userId: string }
+  ) =>
+    api<void>(
+      `/api/knowledge-centers/${knowledgeCenterId}/users`,
+      {
+        method: "POST",
+        body: JSON.stringify(payload),
+      }
+    ),
+
+  addChannelAccess: (
+    knowledgeCenterId: string,
+    payload: { channelId: string }
+  ) =>
+    api<void>(
+      `/api/knowledge-centers/${knowledgeCenterId}/channels`,
+      {
+        method: "POST",
+        body: JSON.stringify(payload),
+      }
+    ),
+}
+
+export const KnowledgeItemAPI = {
+  create: (
+    knowledgeCenterId: string,
+    payload: CreateKnowledgeItemPayload
+  ) =>
+    api<KnowledgeItem>(
+      `/api/knowledge/knowledge-centers/${knowledgeCenterId}/items`,
+      {
+        method: "POST",
+        body: JSON.stringify(payload),
+      }
+    ),
+
+  list: (knowledgeCenterId: string) =>
+    api<KnowledgeItem[]>(
+      `/api/knowledge/knowledge-centers/${knowledgeCenterId}/items`
+    ),
+
+  get: (itemId: string) =>
+    api<KnowledgeItem>(`/api/knowledge/items/${itemId}`),
+
+  update: (itemId: string, payload: UpdateKnowledgeItemPayload) =>
+    api<KnowledgeItem>(`/api/knowledge/items/${itemId}`, {
+      method: "PUT",
+      body: JSON.stringify(payload),
+    }),
+
+  delete: (itemId: string) =>
+    api<void>(`/api/knowledge/items/${itemId}`, {
+      method: "DELETE",
     }),
 }
 

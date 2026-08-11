@@ -74,3 +74,40 @@ Source of truth: [src/lib/api.ts](/home/nk/Projects/Test/allisonTest/cis-admin-u
 | `LeadAPI.create` | `POST` | `/internal/channels/{channelId}/leads` |
 | `LeadAPI.assign` | `POST` | `/internal/channels/{channelId}/leads/assign` |
 | `LeadAPI.moveStage` | `POST` | `/internal/channels/{channelId}/leads/moveStage` |
+
+## Product Service
+
+| Helper | Method | Path |
+| --- | --- | --- |
+| `ProductAPI.listDealerProducts` | `GET` | `/public/dealer/products` |
+| `ProductAPI.getDealerProduct` | `GET` | `/public/dealer/products/{productId}` |
+| `ProductAPI.getConfiguration` | `GET` | `/public/cis/products/{productId}/configurations/{configurationId}` |
+| `ProductAPI.validateConfiguration` | `POST` | `/public/cis/products/configurations/validate` |
+| `ProductAPI.verifyProduct` | `POST` | `/public/cis/products/verify` |
+| `ProductAPI.verifyProductOption` | `POST` | `/public/cis/products/configurations/options/verify` |
+
+Base URL: `process.env.NEXT_PUBLIC_PRODUCT_API`
+
+## CIS Base URL
+
+Base URL: `process.env.NEXT_PUBLIC_API_URL`
+
+## Dealer Pricing And Checkout
+
+| Helper | Method | Path |
+| --- | --- | --- |
+| `DealerAPI.listChannelPricing` | `GET` | `/api/dealer/channels/{channelId}/pricing` |
+| `DealerAPI.getChannelProductPricing` | `GET` | `/api/dealer/channels/{channelId}/pricing/products/{productId}` |
+| `DealerAPI.getChannelProductConfigurationPricing` | `GET` | `/api/dealer/channels/{channelId}/pricing/products/{productId}/configurations/{configurationId}` |
+| `DealerAPI.checkout` | `POST` | `/api/dealer/channels/{channelId}/checkout` |
+
+## Admin Channel Pricing
+
+| Helper | Method | Path |
+| --- | --- | --- |
+| `CISAPI.listProductPricing` | `GET` | `/api/admin/channels/{channelId}/pricing/products` |
+| `CISAPI.updateProductPricing` | `PUT` | `/api/admin/channels/{channelId}/pricing/products` |
+| `CISAPI.listOptionPricing` | `GET` | `/api/admin/channels/{channelId}/pricing/products/{productId}/configurations/{configurationId}` |
+| `CISAPI.updateOptionPricing` | `PUT` | `/api/admin/channels/{channelId}/pricing/options` |
+
+The admin pricing table loads all products from `ProductAPI.listDealerProducts`, then merges configured prices from `CISAPI.listProductPricing`.

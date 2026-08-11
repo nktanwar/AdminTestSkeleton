@@ -12,9 +12,14 @@ import AdminDashboard from "./pages/AdminDashboard"
 import AdminUsers from "./pages/AdminUsers"
 import DealerDashboard from "./pages/DealerDashboard"
 import DealerChannels from "./pages/DealerChannels"
-import DealerKnowledgeCenters from "./pages/DealerKnowledgeCenters"
+import DealerProducts from "./pages/DealerProducts"
 import DealerLeads from "./pages/DealerLeads"
 import DealerLeadDetail from "./pages/DealerLeadDetail"
+import AdminChannelPricing from "./pages/AdminChannelPricing"
+import KnowledgeCenterDetail from "./pages/KnowledgeCenterDetail"
+import KnowledgeCenterList from "./pages/KnowledgeCenterList"
+import KnowledgeItemEdit from "./pages/KnowledgeItemEdit"
+import KnowledgeItemView from "./pages/KnowledgeItemView"
 import Dashboard from "./pages/Dashboard"
 import Channels from "./pages/Channels"
 import Members from "./pages/Members"
@@ -102,8 +107,20 @@ export default function App() {
               element={<DealerChannels />}
             />
             <Route
+              path="/dealer/products"
+              element={<DealerProducts />}
+            />
+            <Route
               path="/dealer/knowledge-centers"
-              element={<DealerKnowledgeCenters />}
+              element={<KnowledgeCenterList />}
+            />
+            <Route
+              path="/dealer/knowledge-centers/:id"
+              element={<KnowledgeCenterDetail />}
+            />
+            <Route
+              path="/dealer/knowledge/items/:id"
+              element={<KnowledgeItemView />}
             />
             <Route path="/dealer/leads" element={<DealerLeads />} />
             <Route
@@ -121,6 +138,22 @@ export default function App() {
               element={<AdminDashboard />}
             />
             <Route path="/admin/users" element={<AdminUsers />} />
+            <Route
+              path="/admin/knowledge-centers"
+              element={<KnowledgeCenterList />}
+            />
+            <Route
+              path="/admin/knowledge-centers/:id"
+              element={<KnowledgeCenterDetail />}
+            />
+            <Route
+              path="/admin/knowledge/items/:id/edit"
+              element={<KnowledgeItemEdit />}
+            />
+            <Route
+              path="/admin/channels/:channelId/pricing"
+              element={<AdminChannelPricing />}
+            />
             <Route path="/dashboard" element={<Dashboard />} />
             <Route path="/channels" element={<Channels />} />
             <Route

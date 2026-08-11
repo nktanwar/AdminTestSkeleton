@@ -55,19 +55,26 @@ export default function Sidebar() {
   const links = isAdmin
     ? [
         { name: "Dashboard", to: "/admin/dashboard" },
-        { name: "Users", to: "/admin/users" },
         { name: "Channel Dashboard", to: "/dashboard" },
         { name: "Channels", to: "/channels" },
         { name: "Permission Sets", to: "/permissions" },
+        { name: "Users", to: "/admin/users" },
+        {
+          name: "Knowledge Centers",
+          to: "/admin/knowledge-centers",
+        },
+        
       ]
     : [
         { name: "Dashboard", to: "/dealer/dashboard" },
         { name: "Channels", to: "/dealer/channels" },
+        { name: "Products", to: "/dealer/products" },
+        { name: "Leads", to: "/dealer/leads" },
         {
           name: "Knowledge Centers",
           to: "/dealer/knowledge-centers",
         },
-        { name: "Leads", to: "/dealer/leads" },
+        
       ]
 
   return (
