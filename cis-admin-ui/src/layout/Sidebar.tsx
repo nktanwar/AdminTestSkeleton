@@ -68,7 +68,7 @@ export default function Sidebar() {
     : [
         { name: "Dashboard", to: "/dealer/dashboard" },
         { name: "Channels", to: "/dealer/channels" },
-        { name: "Products", to: "/dealer/products" },
+        { name: "Orders", to: "/dealer/orders" },
         { name: "Leads", to: "/dealer/leads" },
         {
           name: "Knowledge Centers",

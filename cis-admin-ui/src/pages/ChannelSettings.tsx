@@ -6,20 +6,27 @@ import {
 } from "@tanstack/react-query"
 import { useParams } from "react-router-dom"
 import {
+  ChannelAPI,
   ChannelMemberAPI,
   PermissionAPI,
   type PermissionSet,
 } from "../lib/api"
 import { useAuth } from "../context/AuthContext"
+import { toUserFacingErrorMessage } from "../lib/errors"
 
 interface AssignPermissionSetInput {
   memberId: string
   permissionSetId: string
 }
 
+interface ChannelSettingsDraft {
+  walletEnabled: boolean
+  knowledgeCenterAccess: boolean
+  pricingEnabled: boolean
+}
+
 function toErrorMessage(error: unknown): string {
-  if (error instanceof Error) return error.message
-  return "Something went wrong"
+  return toUserFacingErrorMessage(error, "Something went wrong")
 }
 
 function resolvePermissionSetId(
@@ -45,6 +52,14 @@ export default function ChannelSettings() {
   const [successToast, setSuccessToast] = useState<
     string | null
   >(null)
+  const [settingsDraft, setSettingsDraft] =
+    useState<ChannelSettingsDraft | null>(null)
+
+  const channelQuery = useQuery({
+    queryKey: ["channel", channelId],
+    queryFn: () => ChannelAPI.get(channelId!),
+    enabled: !!channelId && capabilities.canUpdateChannel,
+  })
 
   const membersQuery = useQuery({
     queryKey: ["channelMembers", channelId],
@@ -89,8 +104,46 @@ export default function ChannelSettings() {
     },
   })
 
+  const settingsMutation = useMutation({
+    mutationFn: (payload: ChannelSettingsDraft) =>
+      ChannelAPI.updateSettings(channelId!, payload),
+    onSuccess: async () => {
+      setSettingsDraft(null)
+      setSuccessToast("Channel settings updated successfully")
+      await queryClient.invalidateQueries({
+        queryKey: ["channel", channelId],
+      })
+      await queryClient.invalidateQueries({
+        queryKey: ["channels"],
+      })
+    },
+  })
+
   const members = membersQuery.data ?? []
   const permissionSets = permissionSetsQuery.data ?? []
+  const currentSettings: ChannelSettingsDraft = settingsDraft ?? {
+    walletEnabled: channelQuery.data?.walletEnabled ?? false,
+    knowledgeCenterAccess:
+      channelQuery.data?.knowledgeCenterAccess ?? false,
+    pricingEnabled:
+      channelQuery.data?.pricingEnabled ??
+      channelQuery.data?.pricingEnable ??
+      false,
+  }
+  const savedSettings: ChannelSettingsDraft = {
+    walletEnabled: channelQuery.data?.walletEnabled ?? false,
+    knowledgeCenterAccess:
+      channelQuery.data?.knowledgeCenterAccess ?? false,
+    pricingEnabled:
+      channelQuery.data?.pricingEnabled ??
+      channelQuery.data?.pricingEnable ??
+      false,
+  }
+  const settingsDirty =
+    currentSettings.walletEnabled !== savedSettings.walletEnabled ||
+    currentSettings.knowledgeCenterAccess !==
+      savedSettings.knowledgeCenterAccess ||
+    currentSettings.pricingEnabled !== savedSettings.pricingEnabled
 
   useEffect(() => {
     if (!successToast) return
@@ -125,18 +178,11 @@ export default function ChannelSettings() {
     )
   }
 
-  if (!capabilities.canManagePermissions) {
-    return (
-      <div className="bg-[var(--bg-card)] border border-[var(--border)] rounded-lg p-6 space-y-2">
-        <h1 className="text-xl font-semibold">Settings</h1>
-        <p className="text-sm text-[var(--text-muted)]">
-          You can view settings, but you do not have permission to manage member permissions.
-        </p>
-      </div>
-    )
-  }
-
-  if (membersQuery.isLoading || permissionSetsQuery.isLoading) {
+  if (
+    channelQuery.isLoading ||
+    (capabilities.canManagePermissions &&
+      (membersQuery.isLoading || permissionSetsQuery.isLoading))
+  ) {
     return (
       <div className="text-sm text-[var(--text-muted)]">
         Loading channel settings...
@@ -144,23 +190,18 @@ export default function ChannelSettings() {
     )
   }
 
-  if (membersQuery.error || permissionSetsQuery.error) {
+  if (
+    channelQuery.error ||
+    (capabilities.canManagePermissions &&
+      (membersQuery.error || permissionSetsQuery.error))
+  ) {
     return (
       <div className="text-red-500">
         {toErrorMessage(
-          membersQuery.error ?? permissionSetsQuery.error
+          channelQuery.error ??
+            membersQuery.error ??
+            permissionSetsQuery.error
         )}
-      </div>
-    )
-  }
-
-  if (permissionSets.length === 0) {
-    return (
-      <div className="bg-[var(--bg-card)] border border-[var(--border)] rounded-lg p-6 space-y-2">
-        <h1 className="text-xl font-semibold">Settings</h1>
-        <p className="text-sm text-[var(--text-muted)]">
-          No permission sets exist for this channel. Create one in the Permission Sets page first.
-        </p>
       </div>
     )
   }
@@ -180,9 +221,15 @@ export default function ChannelSettings() {
       <div>
         <h1 className="text-2xl font-semibold">Settings</h1>
         <p className="text-sm text-[var(--text-muted)] mt-1">
-          Assign permission sets to channel members.
+          Manage channel features and member permissions.
         </p>
       </div>
+
+      {settingsMutation.error && (
+        <div className="text-sm text-red-400">
+          {toErrorMessage(settingsMutation.error)}
+        </div>
+      )}
 
       {assignMutation.error && (
         <div className="text-sm text-red-400">
@@ -190,6 +237,82 @@ export default function ChannelSettings() {
         </div>
       )}
 
+      <section className="bg-[var(--bg-card)] border border-[var(--border)] rounded-lg p-5 space-y-5">
+        <div>
+          <h2 className="text-lg font-semibold">Channel Features</h2>
+          <p className="text-sm text-[var(--text-muted)] mt-1">
+            Enable or disable channel capabilities.
+          </p>
+        </div>
+
+        <div className="grid gap-3 md:grid-cols-3">
+          {[
+            {
+              key: "walletEnabled" as const,
+              label: "Wallet",
+            },
+            {
+              key: "knowledgeCenterAccess" as const,
+              label: "Knowledge Center",
+            },
+            {
+              key: "pricingEnabled" as const,
+              label: "Pricing",
+            },
+          ].map((setting) => (
+            <label
+              key={setting.key}
+              className="flex items-center justify-between gap-4 rounded-lg border border-[var(--border)] bg-[var(--bg-panel)] px-4 py-3"
+            >
+              <span className="text-sm font-semibold">{setting.label}</span>
+              <input
+                type="checkbox"
+                checked={currentSettings[setting.key]}
+                onChange={(event) =>
+                  setSettingsDraft({
+                    ...currentSettings,
+                    [setting.key]: event.target.checked,
+                  })
+                }
+                className="h-5 w-5 accent-emerald-600"
+              />
+            </label>
+          ))}
+        </div>
+
+        <div className="flex justify-end">
+          <button
+            type="button"
+            disabled={!settingsDirty || settingsMutation.isPending}
+            onClick={() => settingsMutation.mutate(currentSettings)}
+            className="rounded bg-emerald-600 px-4 py-2 text-sm font-semibold text-white hover:bg-emerald-700 disabled:opacity-50"
+          >
+            {settingsMutation.isPending
+              ? "Saving..."
+              : "Save Settings"}
+          </button>
+        </div>
+      </section>
+
+      {!capabilities.canManagePermissions && (
+        <div className="bg-[var(--bg-card)] border border-[var(--border)] rounded-lg p-6 space-y-2">
+          <h2 className="text-lg font-semibold">Member Permissions</h2>
+          <p className="text-sm text-[var(--text-muted)]">
+            You can update channel settings, but you do not have permission to manage member permissions.
+          </p>
+        </div>
+      )}
+
+      {capabilities.canManagePermissions && permissionSets.length === 0 && (
+        <div className="bg-[var(--bg-card)] border border-[var(--border)] rounded-lg p-6 space-y-2">
+          <h2 className="text-lg font-semibold">Member Permissions</h2>
+          <p className="text-sm text-[var(--text-muted)]">
+            No permission sets exist for this channel. Create one in the Permission Sets page first.
+          </p>
+        </div>
+      )}
+
+      {capabilities.canManagePermissions && permissionSets.length > 0 && (
       <div className="bg-[var(--bg-card)] border border-[var(--border)] rounded-lg overflow-hidden">
         <table className="w-full text-sm">
           <thead className="bg-zinc-800 text-zinc-300">
@@ -297,6 +420,7 @@ export default function ChannelSettings() {
           </tbody>
         </table>
       </div>
+      )}
     </div>
   )
 }

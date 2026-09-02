@@ -7,11 +7,13 @@ import {
 } from "react-router-dom"
 import AppLayout from "./layout/AppLayout"
 import Login from "./pages/Login"
+import CompleteRegistration from "./pages/CompleteRegistration"
 import Profile from "./pages/Profile"
 import AdminDashboard from "./pages/AdminDashboard"
 import AdminUsers from "./pages/AdminUsers"
 import DealerDashboard from "./pages/DealerDashboard"
 import DealerChannels from "./pages/DealerChannels"
+import DealerOrders from "./pages/DealerOrders"
 import DealerProducts from "./pages/DealerProducts"
 import DealerLeads from "./pages/DealerLeads"
 import DealerLeadDetail from "./pages/DealerLeadDetail"
@@ -95,6 +97,10 @@ export default function App() {
       <Routes>
         <Route path="/" element={<HomeRedirect />} />
         <Route path="/login" element={<LoginRoute />} />
+        <Route
+          path="/complete-registration"
+          element={<CompleteRegistration />}
+        />
 
         <Route element={<ProtectedRoute />}>
           <Route element={<AppShell />}>
@@ -106,6 +112,7 @@ export default function App() {
               path="/dealer/channels"
               element={<DealerChannels />}
             />
+            <Route path="/dealer/orders" element={<DealerOrders />} />
             <Route
               path="/dealer/products"
               element={<DealerProducts />}

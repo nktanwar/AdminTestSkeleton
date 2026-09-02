@@ -11,6 +11,7 @@ import {
   type Lead,
 } from "../lib/api"
 import { useAuth } from "../context/AuthContext"
+import { toUserFacingErrorMessage } from "../lib/errors"
 
 const STAGE_OPTIONS = [
   "NEW",
@@ -227,7 +228,7 @@ export default function MyLeads() {
         {myLeadsQuery.error && (
           <div className="p-4 text-red-500 text-base font-medium">
             {myLeadsQuery.error instanceof Error
-              ? myLeadsQuery.error.message
+              ? toUserFacingErrorMessage(myLeadsQuery.error)
               : "Failed to load assigned leads."}
           </div>
         )}

@@ -11,10 +11,10 @@ import {
   type KnowledgeCenter,
 } from "../lib/api"
 import { useAuth } from "../context/AuthContext"
+import { toUserFacingErrorMessage } from "../lib/errors"
 
 function toErrorMessage(error: unknown): string {
-  if (error instanceof Error) return error.message
-  return "Something went wrong."
+  return toUserFacingErrorMessage(error, "Something went wrong.")
 }
 
 function formatDate(value: string): string {

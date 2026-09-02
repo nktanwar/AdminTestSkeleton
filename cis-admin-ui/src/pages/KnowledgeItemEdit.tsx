@@ -11,6 +11,7 @@ import {
   type KnowledgeItemType,
   type UpdateKnowledgeItemPayload,
 } from "../lib/api"
+import { toUserFacingErrorMessage } from "../lib/errors"
 
 const ITEM_TYPES: KnowledgeItemType[] = [
   "ARTICLE",
@@ -20,8 +21,7 @@ const ITEM_TYPES: KnowledgeItemType[] = [
 ]
 
 function toErrorMessage(error: unknown): string {
-  if (error instanceof Error) return error.message
-  return "Something went wrong."
+  return toUserFacingErrorMessage(error, "Something went wrong.")
 }
 
 function parseTags(value: string): string[] {

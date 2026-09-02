@@ -2,11 +2,9 @@ import { useState } from "react"
 import { useNavigate } from "react-router-dom"
 import { getTheme, setTheme } from "../lib/theme"
 import { useAuth } from "../context/AuthContext"
-
-function toErrorMessage(error: unknown): string {
-  if (error instanceof Error) return error.message
-  return "Unable to sign in"
-}
+import { RegistrationIncompleteError } from "../lib/api"
+import { setPendingRegistrationEmail } from "../lib/auth"
+import { toUserFacingErrorMessage } from "../lib/errors"
 
 export default function Login() {
   const [email, setEmail] = useState("")
@@ -46,7 +44,16 @@ export default function Login() {
         { replace: true }
       )
     } catch (error: unknown) {
-      setError(toErrorMessage(error))
+      if (error instanceof RegistrationIncompleteError) {
+        setPendingRegistrationEmail(error.email)
+        navigate("/complete-registration", {
+          replace: true,
+          state: { email: error.email },
+        })
+        return
+      }
+
+      setError(toUserFacingErrorMessage(error, "Unable to sign in"))
     } finally {
       setLoading(false)
     }

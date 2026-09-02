@@ -12,6 +12,7 @@ import {
 import { useAuth } from "../context/AuthContext"
 import { canViewFunnels } from "../lib/access"
 import type { Channel } from "../types/channel"
+import { toUserFacingErrorMessage } from "../lib/errors"
 
 const EMPTY_DASHBOARD: DashboardResponse = {
   summary: {
@@ -77,8 +78,7 @@ function toApiErrorMessage(error: unknown, fallback: string): string {
     return "You do not have access to this channel resource."
   }
 
-  if (error instanceof Error) return error.message
-  return fallback
+  return toUserFacingErrorMessage(error, fallback)
 }
 
 function statusTone(status: Channel["status"]): string {
@@ -374,6 +374,14 @@ export default function ChannelView() {
       value: channel.knowledgeCenterAccess ? "Enabled" : "Disabled",
       helper: "Whether knowledge center access is available here.",
     },
+    {
+      label: "Pricing",
+      value:
+        (channel.pricingEnabled ?? channel.pricingEnable)
+          ? "Enabled"
+          : "Disabled",
+      helper: "Whether pricing features are enabled for this channel.",
+    },
   ]
 
   const quickActions: QuickAction[] = [
@@ -511,6 +519,14 @@ export default function ChannelView() {
             <InfoField
               label="Knowledge Center"
               value={channel.knowledgeCenterAccess ? "Enabled" : "Disabled"}
+            />
+            <InfoField
+              label="Pricing"
+              value={
+                (channel.pricingEnabled ?? channel.pricingEnable)
+                  ? "Enabled"
+                  : "Disabled"
+              }
             />
           </div>
         </SectionCard>

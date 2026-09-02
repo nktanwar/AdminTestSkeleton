@@ -1,5 +1,6 @@
 import { useQuery } from "@tanstack/react-query"
 import { AdminAPI, type AdminDashboardSummary } from "../lib/api"
+import { toUserFacingErrorMessage } from "../lib/errors"
 
 const DASHBOARD_CARDS: Array<{
   key: keyof AdminDashboardSummary
@@ -127,7 +128,7 @@ export default function AdminDashboard() {
       {summaryQuery.error && (
         <div className="rounded-2xl border border-red-500/30 bg-red-500/10 px-5 py-4 text-sm text-red-200">
           {summaryQuery.error instanceof Error
-            ? summaryQuery.error.message
+            ? toUserFacingErrorMessage(summaryQuery.error)
             : "Failed to load dashboard summary."}
         </div>
       )}

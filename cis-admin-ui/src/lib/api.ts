@@ -2,69 +2,19 @@
 
 import type { Channel } from "../types/channel"
 import type { DealerProduct } from "./productApi"
+import { API_CONFIG, joinBaseAndPath } from "./apiConfig"
 import { clearAuthState, getToken } from "./auth"
-
-function sanitizeBaseUrl(rawBaseUrl: string): string {
-  if (!rawBaseUrl) return ""
-
-  const trimmed = rawBaseUrl.endsWith("/")
-    ? rawBaseUrl.slice(0, -1)
-    : rawBaseUrl
-
-  // Some local setups accidentally set BASE_URL like:
-  // - /lead/{channelId}
-  // - /lead/{channelId}/lead/{channelId}
-  // Strip any trailing /lead... tail so endpoint paths are not duplicated.
-  return trimmed.replace(/\/lead(?:\/.*)?$/i, "")
-}
-
-const RAW_BASE_URL = sanitizeBaseUrl(
-  import.meta.env.VITE_API_BASE_URL ?? ""
-)
-const DEFAULT_API_BASE_URL = "/internal"
-const BASE_URL =
-  RAW_BASE_URL || DEFAULT_API_BASE_URL
-
-function isAbsoluteUrl(value: string): boolean {
-  return /^https?:\/\//i.test(value)
-}
-
-function joinBaseAndPath(base: string, path: string): string {
-  if (!base) return path
-  if (isAbsoluteUrl(path)) return path
-
-  const normalizedBase = base.endsWith("/")
-    ? base.slice(0, -1)
-    : base
-  const normalizedPath = path.startsWith("/")
-    ? path
-    : `/${path}`
-
-  // Avoid duplicated path segments when BASE_URL already contains
-  // part of the endpoint path (e.g. /lead/{channelId} + /lead/{channelId}/{funnelId}).
-  const maxOverlap = Math.min(
-    normalizedBase.length,
-    normalizedPath.length
-  )
-  for (let overlap = maxOverlap; overlap > 0; overlap -= 1) {
-    if (
-      normalizedBase.endsWith(
-        normalizedPath.slice(0, overlap)
-      )
-    ) {
-      return normalizedBase + normalizedPath.slice(overlap)
-    }
-  }
-
-  return normalizedBase + normalizedPath
-}
+import {
+  isRegistrationIncompleteMessage,
+  toUserFacingErrorMessage,
+} from "./errors"
 
 function resolveApiUrl(
   path: string,
   useBaseUrl = true
 ): string {
   if (!useBaseUrl) return path
-  return joinBaseAndPath(BASE_URL, path)
+  return joinBaseAndPath(API_CONFIG.internalBaseUrl, path)
 }
 
 export class ApiError extends Error {
@@ -76,6 +26,20 @@ export class ApiError extends Error {
     this.name = "ApiError"
     this.status = status
     this.rawBody = rawBody
+  }
+}
+
+export class RegistrationIncompleteError extends ApiError {
+  readonly email: string
+
+  constructor(email: string, rawBody = "") {
+    super(
+      409,
+      "Your registration is almost complete. Please finish setting up your account.",
+      rawBody
+    )
+    this.name = "RegistrationIncompleteError"
+    this.email = email
   }
 }
 
@@ -167,8 +131,15 @@ async function api<T>(
     }
     throw new ApiError(
       res.status,
-      parseErrorMessage(text) ??
-        defaultErrorMessage(res.status),
+      toUserFacingErrorMessage(
+        {
+          status: res.status,
+          message:
+            parseErrorMessage(text) ??
+            defaultErrorMessage(res.status),
+        },
+        defaultErrorMessage(res.status)
+      ),
       text
     )
   }
@@ -214,6 +185,23 @@ export const ChannelAPI = {
 
     get: (id: string) =>
   api<Channel>(`/internal/channels/${id}`),
+
+  updateSettings: (
+    id: string,
+    payload: {
+      walletEnabled: boolean
+      knowledgeCenterAccess: boolean
+      pricingEnabled: boolean
+    }
+  ) =>
+    api<Channel>(`/internal/channels/${id}/settings`, {
+      method: "PUT",
+      body: JSON.stringify({
+        walletEnabled: payload.walletEnabled,
+        knowledgeCenterAccess: payload.knowledgeCenterAccess,
+        pricingEnable: payload.pricingEnabled,
+      }),
+    }),
 
   me: (channelId: string) =>
     api<ChannelMe>(`/internal/channels/${channelId}/me`),
@@ -295,6 +283,8 @@ export interface DealerChannel {
   status: "ACTIVE" | "INACTIVE" | string
   walletEnabled: boolean
   knowledgeCenterAccess: boolean
+  pricingEnabled?: boolean
+  pricingEnable?: boolean
 }
 
 export interface DealerKnowledgeCenter {
@@ -400,12 +390,32 @@ export interface CreateUserPayload {
   role: "ADMIN" | "STANDARD" | "DEALER"
 }
 
+export type DealerProvisioningStatus =
+  | "NOT_APPLICABLE"
+  | "IN_PROCESS"
+  | "SUCCESS"
+  | "FAILED"
+
 export interface CreatedUserResponse {
   id: string
   name: string
   email: string
-  password: string
+  password?: string
   phone?: string
+  role?: CreateUserPayload["role"] | string
+  dealerProvisioningStatus?: DealerProvisioningStatus | string
+  provisioningMessage?: string
+  message?: string
+}
+
+export interface CompleteRegistrationPayload {
+  username: string
+  phoneNumber: string
+  password: string
+}
+
+export interface AuthTokenResponse {
+  token?: string
 }
 
 export interface DealerProductPricing {
@@ -457,8 +467,8 @@ export interface DealerCheckoutAnswerRequest {
 export interface DealerCheckoutItemRequest {
   productId: string
   quantity: number
-  configurationId?: string
-  configurationVersion?: number
+  configurationId?: string | null
+  configurationVersion?: number | null
   answers?: DealerCheckoutAnswerRequest[]
 }
 
@@ -487,6 +497,148 @@ export interface DealerCheckoutResponse {
   discountAmount: number
   finalCustomerTotal: number
   finalMargin: number
+}
+
+export interface PageResponse<T> {
+  content: T[]
+  number: number
+  size: number
+  totalElements: number
+  totalPages: number
+  first?: boolean
+  last?: boolean
+}
+
+export interface DealerPricingChannel {
+  channelId: string
+  name: string
+  code: string
+  isDefault: boolean
+}
+
+interface DealerPricingChannelWire {
+  channelId?: unknown
+  id?: unknown
+  _id?: unknown
+  name?: unknown
+  code?: unknown
+  isDefault?: unknown
+  default?: unknown
+}
+
+function getStringField(
+  source: DealerPricingChannelWire,
+  field: keyof DealerPricingChannelWire
+): string {
+  const value = source[field]
+  if (typeof value === "string") return value
+  if (typeof value === "object" && value !== null) {
+    const objectValue = value as Record<string, unknown>
+    if (typeof objectValue.$oid === "string") return objectValue.$oid
+    if (typeof objectValue.oid === "string") return objectValue.oid
+    if (typeof objectValue.value === "string") return objectValue.value
+  }
+  return ""
+}
+
+function normalizeDealerPricingChannel(
+  channel: DealerPricingChannelWire
+): DealerPricingChannel {
+  const channelId =
+    getStringField(channel, "channelId") ||
+    getStringField(channel, "id") ||
+    getStringField(channel, "_id")
+
+  return {
+    channelId,
+    name: getStringField(channel, "name") || "Unnamed channel",
+    code: getStringField(channel, "code") || channelId,
+    isDefault:
+      channel.isDefault === true || channel.default === true,
+  }
+}
+
+export type DealerOrderPaymentStatus = "PENDING" | "SUCCESS" | string
+export type DealerAnalyticsPaymentStatus = "PENDING" | "SUCCESS"
+
+export interface DealerOrderAddress {
+  street?: string | null
+  city?: string | null
+  state?: string | null
+  zipCode?: string | null
+  landmark?: string | null
+  country?: string | null
+}
+
+export interface DealerOrderConfiguration {
+  configurationId: string
+  version: number
+  answers: DealerCheckoutAnswerRequest[]
+}
+
+export interface DealerOrderItem {
+  productId: string
+  name: string
+  sku?: string | null
+  quantity: number
+  color?: unknown[]
+  description?: string | null
+  categoryId?: string | null
+  imageUrl?: string | null
+  price?: number | null
+  metaData?: Record<string, unknown>
+  configuration?: DealerOrderConfiguration | null
+}
+
+export interface DealerOrderInternalResponse {
+  orderId: string
+  dealerId: string
+  dealerPhoneNumber?: string | null
+  customerId?: string | null
+  customerName?: string | null
+  customerPhoneNumber?: string | null
+  customerAddress?: DealerOrderAddress | null
+  items: DealerOrderItem[]
+  totalPrice: number
+  state: string
+  paymentMethod: string
+  paymentStatus: DealerOrderPaymentStatus
+  metaData?: Record<string, unknown>
+  createdAt: string
+  updatedAt: string
+}
+
+export interface DealerOrderAnalyticsItem {
+  productId: string
+  quantity: number
+  dealerUnitPrice: number
+  customerUnitPrice: number
+  dealerTotal: number
+  customerTotal: number
+}
+
+export interface DealerOrderAnalyticsResponse {
+  id: string
+  orderId: string
+  dealerId: string
+  pricingChannelId: string
+  items: DealerOrderAnalyticsItem[]
+  totalDealerCost: number
+  originalCustomerTotal: number
+  discountPercent: number
+  discountAmount: number
+  finalCustomerTotal: number
+  dealerProfit: number
+  orderState: string
+  paymentMethod: string
+  paymentStatus: DealerOrderPaymentStatus
+  createdAt: string
+  updatedAt: string
+}
+
+export interface StoreDealerOrderRequest extends DealerCheckoutRequest {
+  orderId: string
+  paymentStatus: DealerAnalyticsPaymentStatus
 }
 
 export type DealerDashboardProduct = DealerProduct &
@@ -557,6 +709,52 @@ export const DealerAPI = {
       method: "POST",
       body: JSON.stringify(payload),
     }),
+
+  listOrders: (page = 0, size = 50) =>
+    api<PageResponse<DealerOrderInternalResponse>>(
+      `/dealer/orders?page=${page}&size=${size}`
+    ),
+
+  listOrderAnalytics: (page = 0, size = 50) =>
+    api<PageResponse<DealerOrderAnalyticsResponse>>(
+      `/dealer/orders/analytics?page=${page}&size=${size}`
+    ),
+
+  listPricingChannels: () =>
+    api<DealerPricingChannelWire[]>("/api/dealer/pricing/channels").then(
+      (channels) =>
+        channels
+          .map(normalizeDealerPricingChannel)
+          .filter((channel) => channel.channelId)
+    ),
+
+  setDefaultPricingChannel: (channelId: string) =>
+    api<DealerPricingChannelWire>(
+      `/api/dealer/pricing/channels/${channelId}/default`,
+      {
+        method: "POST",
+      }
+    ).then(normalizeDealerPricingChannel),
+
+  calculatePricing: (payload: DealerCheckoutRequest) =>
+    api<DealerCheckoutResponse>("/api/dealer/pricing/calculate", {
+      method: "POST",
+      body: JSON.stringify(payload),
+    }),
+
+  addOrderSnapshot: (payload: StoreDealerOrderRequest) =>
+    api<DealerOrderAnalyticsResponse>("/dealer/orders/add-snapshot", {
+      method: "POST",
+      body: JSON.stringify(payload),
+    }),
+
+  markOrderPaymentDone: (orderId: string) =>
+    api<DealerOrderAnalyticsResponse>(
+      `/dealer/orders/${orderId}/analytics/payment-done`,
+      {
+        method: "POST",
+      }
+    ),
 }
 
 export const KnowledgeCenterAPI = {
@@ -637,12 +835,37 @@ export const KnowledgeItemAPI = {
 
 export const AuthAPI = {
   login: (email: string, password: string) =>
-    api<{
-      token: string
-    }>("/auth/login", {
+    api<{ token: string }>("/auth/login", {
       method: "POST",
       body: JSON.stringify({ email, password }),
+    }).catch((error: unknown) => {
+      if (
+        error instanceof ApiError &&
+        error.status === 409 &&
+        isRegistrationIncompleteMessage(
+          `${error.message} ${error.rawBody}`
+        )
+      ) {
+        throw new RegistrationIncompleteError(email, error.rawBody)
+      }
+
+      throw error
     }),
+
+  completeRegistration: (
+    payload: CompleteRegistrationPayload,
+    firebaseIdToken: string
+  ) =>
+    api<AuthTokenResponse>(
+      "/auth/complete-registration",
+      {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${firebaseIdToken}`,
+        },
+        body: JSON.stringify(payload),
+      }
+    ),
 
   createUser: (payload: CreateUserPayload) =>
     api<CreatedUserResponse>("/auth/create-user", {

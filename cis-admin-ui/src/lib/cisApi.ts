@@ -1,25 +1,9 @@
+import { API_CONFIG, joinBaseAndPath } from "./apiConfig"
 import { clearAuthState, getToken } from "./auth"
-
-function resolveCisBaseUrl(): string {
-  const rawBaseUrl =
-    process.env.NEXT_PUBLIC_API_URL ??
-    import.meta.env.VITE_API_BASE_URL ??
-    ""
-
-  if (!rawBaseUrl) {
-    throw new Error("NEXT_PUBLIC_API_URL is not configured.")
-  }
-
-  return rawBaseUrl.endsWith("/")
-    ? rawBaseUrl.slice(0, -1)
-    : rawBaseUrl
-}
+import { toUserFacingErrorMessage } from "./errors"
 
 function resolveCisUrl(endpoint: string): string {
-  const normalizedEndpoint = endpoint.startsWith("/")
-    ? endpoint
-    : `/${endpoint}`
-  return `${resolveCisBaseUrl()}${normalizedEndpoint}`
+  return joinBaseAndPath(API_CONFIG.internalBaseUrl, endpoint)
 }
 
 async function cisRequest<T>(
@@ -46,7 +30,10 @@ async function cisRequest<T>(
 
     const text = await response.text()
     throw new Error(
-      text.trim() || "CIS API Error"
+      toUserFacingErrorMessage(
+        { status: response.status, message: text },
+        "Unable to complete the request."
+      )
     )
   }
 

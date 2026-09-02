@@ -1,8 +1,10 @@
 /// <reference types="vite/client" />
+interface ImportMetaEnv {
+  readonly VITE_API_BASE_URL?: string
+  readonly VITE_PRODUCT_API_BASE_URL?: string
+  readonly VITE_API_PROXY_TARGET?: string
+}
 
-declare const process: {
-  env: {
-    NEXT_PUBLIC_PRODUCT_API?: string
-    NEXT_PUBLIC_API_URL?: string
-  }
+interface ImportMeta {
+  readonly env: ImportMetaEnv
 }

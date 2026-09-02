@@ -12,6 +12,7 @@ import {
 import { useAuth } from "../context/AuthContext"
 import type { DecodedActor } from "../lib/jwt"
 import { canViewFunnels } from "../lib/access"
+import { toUserFacingErrorMessage } from "../lib/errors"
 
 const EMPTY_DASHBOARD: DashboardResponse = {
   summary: {
@@ -117,8 +118,7 @@ function toErrorMessage(error: unknown): string {
     return "Not authorized to view dashboard data for this channel."
   }
 
-  if (error instanceof Error) return error.message
-  return "Failed to load dashboard"
+  return toUserFacingErrorMessage(error, "Failed to load dashboard")
 }
 
 function formatDate(value: string): string {

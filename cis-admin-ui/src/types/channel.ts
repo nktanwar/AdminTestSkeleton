@@ -7,6 +7,8 @@ export interface Channel {
   // Optional fields (used in View page)
   walletEnabled?: boolean
   knowledgeCenterAccess?: boolean
+  pricingEnabled?: boolean
+  pricingEnable?: boolean
   createdAt?: string
   updatedAt?: string | null
 }

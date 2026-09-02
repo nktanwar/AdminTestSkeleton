@@ -9,13 +9,13 @@ import type { Channel } from "../types/channel"
 import { ApiError, ChannelAPI } from "../lib/api"
 import CreateChannelModal from "../components/CreateChannelModal"
 import { useAuth } from "../context/AuthContext"
+import { toUserFacingErrorMessage } from "../lib/errors"
 
 function toErrorMessage(error: unknown): string {
   if (error instanceof ApiError && error.status === 403) {
     return "You do not have permission to perform this action."
   }
-  if (error instanceof Error) return error.message
-  return "Something went wrong"
+  return toUserFacingErrorMessage(error, "Something went wrong")
 }
 
 function statusTone(status: Channel["status"]): string {

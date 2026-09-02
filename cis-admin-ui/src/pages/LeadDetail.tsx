@@ -21,6 +21,7 @@ import {
 } from "../lib/api"
 import { useAuth } from "../context/AuthContext"
 import { canViewFunnels } from "../lib/access"
+import { toUserFacingErrorMessage } from "../lib/errors"
 
 interface FlattenedDetail {
   path: string
@@ -89,14 +90,10 @@ function toMutationErrorMessage(
   fallback: string
 ): string {
   if (error instanceof ApiError) {
-    return error.message || fallback
+    return toUserFacingErrorMessage(error, fallback)
   }
 
-  if (error instanceof Error) {
-    return error.message
-  }
-
-  return fallback
+  return toUserFacingErrorMessage(error, fallback)
 }
 
 function getStageGuidance(stage: string): {
@@ -649,7 +646,7 @@ export default function LeadDetail() {
       <div className="space-y-4">
         <div className="text-red-500">
           {leadsQuery.error instanceof Error
-            ? leadsQuery.error.message
+            ? toUserFacingErrorMessage(leadsQuery.error)
             : "Failed to load lead"}
         </div>
         <button

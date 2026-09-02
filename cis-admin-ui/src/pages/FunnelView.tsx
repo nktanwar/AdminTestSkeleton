@@ -21,6 +21,7 @@ import {
 } from "../lib/api"
 import { useAuth } from "../context/AuthContext"
 import { canViewFunnels } from "../lib/access"
+import { toUserFacingErrorMessage } from "../lib/errors"
 
 const STAGE_OPTIONS = [
   "NEW",
@@ -82,8 +83,7 @@ function toErrorMessage(
     return forbiddenMessage
   }
 
-  if (error instanceof Error) return error.message
-  return fallback
+  return toUserFacingErrorMessage(error, fallback)
 }
 
 export default function FunnelView() {

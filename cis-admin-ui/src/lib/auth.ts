@@ -5,6 +5,7 @@ const USER_ID_KEY = "cis_user_id"
 const MEMBERSHIPS_KEY = "cis_memberships"
 const SELECTED_MEMBERSHIP_ID_KEY = "cis_selected_membership_id"
 const SELECTED_CHANNEL_ID_KEY = "cis_selected_channel_id"
+const PENDING_REGISTRATION_EMAIL_KEY = "cis_pending_registration_email"
 const AUTH_EVENT = "cis-auth-changed"
 
 interface JwtPayload {
@@ -155,6 +156,18 @@ export function clearAuthState() {
   localStorage.removeItem(SELECTED_MEMBERSHIP_ID_KEY)
   localStorage.removeItem(SELECTED_CHANNEL_ID_KEY)
   window.dispatchEvent(new Event(AUTH_EVENT))
+}
+
+export function setPendingRegistrationEmail(email: string) {
+  sessionStorage.setItem(PENDING_REGISTRATION_EMAIL_KEY, email)
+}
+
+export function getPendingRegistrationEmail(): string | null {
+  return sessionStorage.getItem(PENDING_REGISTRATION_EMAIL_KEY)
+}
+
+export function clearPendingRegistrationEmail() {
+  sessionStorage.removeItem(PENDING_REGISTRATION_EMAIL_KEY)
 }
 
 export function isLoggedIn(): boolean {

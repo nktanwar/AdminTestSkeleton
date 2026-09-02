@@ -9,6 +9,7 @@ import { ChannelAPI } from "../lib/api"
 import { useAuth } from "../context/AuthContext"
 import { canViewFunnels } from "../lib/access"
 import type { Channel } from "../types/channel"
+import { toUserFacingErrorMessage } from "../lib/errors"
 
 function statusTone(status: Channel["status"]): string {
   if (status === "ACTIVE") {
@@ -51,7 +52,7 @@ export default function ChannelLayout() {
     return (
       <div className="rounded-2xl border border-red-500/30 bg-red-500/10 p-6 text-red-200">
         {channelQuery.error instanceof Error
-          ? channelQuery.error.message
+          ? toUserFacingErrorMessage(channelQuery.error)
           : "Failed to load channel"}
       </div>
     )

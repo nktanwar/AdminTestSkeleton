@@ -7,14 +7,14 @@ import {
 } from "../lib/api"
 import { useAuth } from "../context/AuthContext"
 import { canViewFunnels } from "../lib/access"
+import { toUserFacingErrorMessage } from "../lib/errors"
 
 function toErrorMessage(error: unknown): string {
   if (error instanceof ApiError && error.status === 403) {
     return "Not authorized to view funnels in this channel."
   }
 
-  if (error instanceof Error) return error.message
-  return "Failed to load funnels"
+  return toUserFacingErrorMessage(error, "Failed to load funnels")
 }
 
 function formatDate(value: string): string {

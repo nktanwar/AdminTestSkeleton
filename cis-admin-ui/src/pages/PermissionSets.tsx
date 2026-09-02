@@ -11,6 +11,7 @@ import {
 } from "../lib/api"
 import CreatePermissionSetModal from "../components/CreatePermissionSetModal"
 import { useAuth } from "../context/AuthContext"
+import { toUserFacingErrorMessage } from "../lib/errors"
 
 const DEFAULT_PERMISSION_CODES = [
   "CREATE_FUNNEL",
@@ -20,8 +21,7 @@ const DEFAULT_PERMISSION_CODES = [
 ]
 
 function toErrorMessage(error: unknown): string {
-  if (error instanceof Error) return error.message
-  return "Something went wrong"
+  return toUserFacingErrorMessage(error, "Something went wrong")
 }
 
 function permissionToCode(value: unknown): string {

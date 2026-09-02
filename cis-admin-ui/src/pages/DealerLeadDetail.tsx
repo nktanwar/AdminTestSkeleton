@@ -9,6 +9,7 @@ import {
   DealerAPI,
   type UpdateDealerLeadStagePayload,
 } from "../lib/api"
+import { toUserFacingErrorMessage } from "../lib/errors"
 
 const STAGE_OPTIONS = [
   "CONTACTED",
@@ -85,7 +86,7 @@ export default function DealerLeadDetail() {
     return (
       <div className="rounded-2xl border border-red-500/30 bg-red-500/10 p-6 text-sm text-red-200">
         {leadQuery.error instanceof Error
-          ? leadQuery.error.message
+          ? toUserFacingErrorMessage(leadQuery.error)
           : "Failed to load lead details."}
       </div>
     )
@@ -176,7 +177,7 @@ export default function DealerLeadDetail() {
         {updateStageMutation.error && (
           <div className="mt-4 rounded-2xl border border-red-500/30 bg-red-500/10 px-4 py-3 text-sm text-red-200">
             {updateStageMutation.error instanceof Error
-              ? updateStageMutation.error.message
+              ? toUserFacingErrorMessage(updateStageMutation.error)
               : "Failed to update stage."}
           </div>
         )}

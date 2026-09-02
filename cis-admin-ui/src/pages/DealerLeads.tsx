@@ -1,6 +1,7 @@
 import { useQuery } from "@tanstack/react-query"
 import { useNavigate } from "react-router-dom"
 import { DealerAPI } from "../lib/api"
+import { toUserFacingErrorMessage } from "../lib/errors"
 
 function formatDate(value: string): string {
   const parsed = Date.parse(value)
@@ -27,7 +28,7 @@ export default function DealerLeads() {
     return (
       <div className="rounded-2xl border border-red-500/30 bg-red-500/10 p-6 text-sm text-red-200">
         {leadsQuery.error instanceof Error
-          ? leadsQuery.error.message
+          ? toUserFacingErrorMessage(leadsQuery.error)
           : "Failed to load leads."}
       </div>
     )

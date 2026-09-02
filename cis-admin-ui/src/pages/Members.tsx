@@ -14,6 +14,7 @@ import {
 } from "../lib/api"
 import AddChannelMemberModal from "../components/AddChannelMemberModal"
 import { useAuth } from "../context/AuthContext"
+import { toUserFacingErrorMessage } from "../lib/errors"
 
 /* ---------- Types ---------- */
 
@@ -29,8 +30,7 @@ interface Member {
 }
 
 function toErrorMessage(error: unknown): string {
-  if (error instanceof Error) return error.message
-  return "Something went wrong"
+  return toUserFacingErrorMessage(error, "Something went wrong")
 }
 
 /* ---------- Page ---------- */

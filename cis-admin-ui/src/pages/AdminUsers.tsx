@@ -1,10 +1,12 @@
 import { useState } from "react"
 import { useMutation } from "@tanstack/react-query"
 import {
+  ApiError,
   AuthAPI,
   type CreateUserPayload,
   type CreatedUserResponse,
 } from "../lib/api"
+import { toUserFacingErrorMessage } from "../lib/errors"
 
 const INITIAL_FORM: CreateUserPayload = {
   name: "",
@@ -14,9 +16,19 @@ const INITIAL_FORM: CreateUserPayload = {
   role: "DEALER",
 }
 
-function toErrorMessage(error: unknown): string {
-  if (error instanceof Error) return error.message
-  return "Something went wrong."
+function toErrorMessage(
+  error: unknown,
+  role?: CreateUserPayload["role"]
+): string {
+  if (
+    role === "DEALER" &&
+    (error instanceof TypeError ||
+      (error instanceof ApiError && error.status >= 500))
+  ) {
+    return "Dealer request could not be confirmed. The internal user may have been created and account provisioning may still be processing."
+  }
+
+  return toUserFacingErrorMessage(error, "Something went wrong.")
 }
 
 function validateForm(values: CreateUserPayload): string | null {
@@ -35,6 +47,57 @@ async function copyText(value: string) {
   await navigator.clipboard.writeText(value)
 }
 
+function getProvisioningStatus(
+  user: CreatedUserResponse
+): string {
+  return (user.dealerProvisioningStatus ?? "NOT_APPLICABLE").toUpperCase()
+}
+
+function isDealerUser(user: CreatedUserResponse): boolean {
+  return (
+    user.role === "DEALER" ||
+    getProvisioningStatus(user) !== "NOT_APPLICABLE"
+  )
+}
+
+function getCreationTitle(user: CreatedUserResponse): string {
+  if (!isDealerUser(user)) return "User Created Successfully"
+
+  const status = getProvisioningStatus(user)
+  if (status === "SUCCESS") {
+    return "Dealer Created And Provisioned"
+  }
+  if (status === "IN_PROCESS") {
+    return "Dealer Created, Provisioning In Progress"
+  }
+  if (status === "FAILED") {
+    return "Dealer Created, Provisioning Needs Attention"
+  }
+
+  return "Dealer Created Successfully"
+}
+
+function getCreationMessage(user: CreatedUserResponse): string {
+  if (user.message) return user.message
+  if (user.provisioningMessage) return user.provisioningMessage
+  if (!isDealerUser(user)) {
+    return "Remind the user to change this temporary password after first sign-in."
+  }
+
+  const status = getProvisioningStatus(user)
+  if (status === "SUCCESS") {
+    return "Dealer account provisioning completed successfully."
+  }
+  if (status === "IN_PROCESS") {
+    return "Dealer created. Account provisioning is still in progress."
+  }
+  if (status === "FAILED") {
+    return "Dealer was created internally, but Auth provisioning failed. Check the provisioning status before creating another dealer."
+  }
+
+  return "Dealer was created internally."
+}
+
 export default function AdminUsers() {
   const [form, setForm] = useState(INITIAL_FORM)
   const [validationError, setValidationError] = useState<string | null>(null)
@@ -43,8 +106,13 @@ export default function AdminUsers() {
 
   const createUserMutation = useMutation({
     mutationFn: (payload: CreateUserPayload) => AuthAPI.createUser(payload),
-    onSuccess: (data) => {
-      setCreatedUser(data)
+    onSuccess: (data, variables) => {
+      setCreatedUser({
+        ...data,
+        role: data.role ?? variables.role,
+        phone: data.phone ?? variables.phone,
+        password: data.password ?? variables.password,
+      })
       setForm(INITIAL_FORM)
       setValidationError(null)
       setCopiedField(null)
@@ -69,8 +137,30 @@ export default function AdminUsers() {
     }
 
     setValidationError(null)
-    await createUserMutation.mutateAsync(payload)
+    try {
+      await createUserMutation.mutateAsync(payload)
+    } catch {
+      // React Query exposes the error state in the form alert.
+    }
   }
+
+  const creationTitle = createdUser
+    ? getCreationTitle(createdUser)
+    : null
+  const creationMessage = createdUser
+    ? getCreationMessage(createdUser)
+    : null
+  const creationStatus = createdUser
+    ? getProvisioningStatus(createdUser)
+    : null
+  const errorMessage =
+    validationError ??
+    (createUserMutation.error
+      ? toErrorMessage(
+          createUserMutation.error,
+          createUserMutation.variables?.role
+        )
+      : null)
 
   return (
     <div className="grid gap-6 xl:grid-cols-[minmax(0,1.15fr)_420px]">
@@ -173,9 +263,9 @@ export default function AdminUsers() {
             />
           </label>
 
-          {(validationError || createUserMutation.error) && (
+          {errorMessage && (
             <div className="rounded-2xl border border-red-500/30 bg-red-500/10 px-4 py-3 text-sm text-red-200">
-              {validationError ?? toErrorMessage(createUserMutation.error)}
+              {errorMessage}
             </div>
           )}
 
@@ -193,6 +283,7 @@ export default function AdminUsers() {
                 setForm(INITIAL_FORM)
                 setValidationError(null)
                 createUserMutation.reset()
+                setCreatedUser(null)
               }}
               className="rounded-2xl border border-[var(--border)] px-5 py-3 text-sm font-medium hover:bg-[var(--accent-soft)]"
             >
@@ -213,9 +304,14 @@ export default function AdminUsers() {
           <div className="mt-6 space-y-4 rounded-3xl border border-emerald-500/30 bg-emerald-500/10 p-5">
             <div>
               <p className="text-xs uppercase tracking-[0.2em] text-emerald-200/80">
-                User Created Successfully
+                {creationTitle}
               </p>
               <p className="mt-2 text-lg font-semibold">{createdUser.name}</p>
+              {isDealerUser(createdUser) && creationStatus && (
+                <p className="mt-2 inline-flex rounded-xl border border-[var(--border)] bg-[var(--bg-panel)] px-3 py-1 text-xs font-semibold">
+                  {creationStatus}
+                </p>
+              )}
             </div>
 
             <div className="rounded-2xl border border-[var(--border)] bg-[var(--bg-panel)] p-4">
@@ -235,22 +331,24 @@ export default function AdminUsers() {
               </button>
             </div>
 
-            <div className="rounded-2xl border border-[var(--border)] bg-[var(--bg-panel)] p-4">
-              <div className="text-xs uppercase tracking-[0.2em] text-[var(--text-muted)]">
-                Temporary Password
+            {createdUser.password && (
+              <div className="rounded-2xl border border-[var(--border)] bg-[var(--bg-panel)] p-4">
+                <div className="text-xs uppercase tracking-[0.2em] text-[var(--text-muted)]">
+                  Temporary Password
+                </div>
+                <div className="mt-2 break-all text-sm">{createdUser.password}</div>
+                <button
+                  type="button"
+                  onClick={async () => {
+                    await copyText(createdUser.password ?? "")
+                    setCopiedField("password")
+                  }}
+                  className="mt-3 rounded-xl border border-[var(--border)] px-3 py-2 text-xs hover:bg-[var(--accent-soft)]"
+                >
+                  {copiedField === "password" ? "Copied" : "Copy Password"}
+                </button>
               </div>
-              <div className="mt-2 break-all text-sm">{createdUser.password}</div>
-              <button
-                type="button"
-                onClick={async () => {
-                  await copyText(createdUser.password)
-                  setCopiedField("password")
-                }}
-                className="mt-3 rounded-xl border border-[var(--border)] px-3 py-2 text-xs hover:bg-[var(--accent-soft)]"
-              >
-                {copiedField === "password" ? "Copied" : "Copy Password"}
-              </button>
-            </div>
+            )}
 
             {createdUser.phone && (
               <div className="text-sm text-[var(--text-muted)]">
@@ -258,9 +356,7 @@ export default function AdminUsers() {
               </div>
             )}
 
-            <p className="text-sm text-[var(--text-muted)]">
-              Remind the user to change this temporary password after first sign-in.
-            </p>
+            <p className="text-sm text-[var(--text-muted)]">{creationMessage}</p>
           </div>
         ) : (
           <div className="mt-6 rounded-3xl border border-dashed border-[var(--border)] bg-[var(--bg-panel)] p-5 text-sm text-[var(--text-muted)]">

@@ -10,9 +10,15 @@ import {
   useState,
   type ReactNode,
 } from "react"
-import { AuthAPI, type ChannelCapabilities, type ChannelMe } from "../lib/api"
+import {
+  AuthAPI,
+  type ChannelCapabilities,
+  type ChannelMe,
+  type CompleteRegistrationPayload,
+} from "../lib/api"
 import {
   type AuthMembership,
+  clearPendingRegistrationEmail,
   clearAuthState,
   getMemberships,
   getSelectedChannelId,
@@ -24,6 +30,7 @@ import {
   setSelectedMembershipContext,
   setToken,
 } from "../lib/auth"
+import { getFreshFirebaseIdToken } from "../lib/firebaseSession"
 import {
   getActorFromToken,
   type DecodedActor,
@@ -51,6 +58,9 @@ interface AuthContextValue {
   login: (
     email: string,
     password: string
+  ) => Promise<"ADMIN" | "STANDARD" | "DEALER">
+  completeRegistration: (
+    payload: CompleteRegistrationPayload
   ) => Promise<"ADMIN" | "STANDARD" | "DEALER">
   selectMembership: (membershipId: string) => Promise<void>
   selectChannel: (channelId: string) => void
@@ -88,6 +98,7 @@ const FALLBACK_AUTH_CONTEXT: AuthContextValue = {
   capabilities: EMPTY_CAPABILITIES,
   capabilitiesLoading: false,
   login: async () => "STANDARD",
+  completeRegistration: async () => "STANDARD",
   selectMembership: async () => {},
   selectChannel: () => {},
   logout: () => {},
@@ -257,6 +268,41 @@ export function AuthProvider({
     [queryClient, refreshSession]
   )
 
+  const completeRegistration = useCallback(
+    async (payload: CompleteRegistrationPayload) => {
+      const firebaseIdToken = await getFreshFirebaseIdToken()
+      if (!firebaseIdToken) {
+        throw new Error(
+          "Your secure sign-in session expired. Please sign in again."
+        )
+      }
+
+      const res = await AuthAPI.completeRegistration(
+        payload,
+        firebaseIdToken
+      )
+
+      if (!res.token) {
+        throw new Error(
+          "Your account was completed, but we could not start your dashboard session. Please sign in again."
+        )
+      }
+
+      setToken(res.token)
+      clearPendingRegistrationEmail()
+
+      const ok = await refreshSession()
+      if (!ok) {
+        throw new Error(
+          "Your account was completed, but we could not start your dashboard session. Please sign in again."
+        )
+      }
+
+      return resolveRoleFromActor(getActorFromToken()) ?? "STANDARD"
+    },
+    [refreshSession]
+  )
+
   const selectMembership = useCallback(
     async (membershipId: string) => {
       const membership = memberships.find((m) => m.membershipId === membershipId)
@@ -326,6 +372,7 @@ export function AuthProvider({
       capabilities: effectiveCapabilities,
       capabilitiesLoading: false,
       login,
+      completeRegistration,
       selectMembership,
       selectChannel,
       logout,
@@ -343,6 +390,7 @@ export function AuthProvider({
       permissions,
       effectiveCapabilities,
       login,
+      completeRegistration,
       selectMembership,
       selectChannel,
       logout,

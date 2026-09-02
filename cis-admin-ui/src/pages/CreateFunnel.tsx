@@ -11,10 +11,10 @@ import {
   type FunnelDefinition,
 } from "../lib/api"
 import { useAuth } from "../context/AuthContext"
+import { toUserFacingErrorMessage } from "../lib/errors"
 
 function toErrorMessage(error: unknown): string {
-  if (error instanceof Error) return error.message
-  return "Unable to create funnel"
+  return toUserFacingErrorMessage(error, "Unable to create funnel")
 }
 
 export default function CreateFunnel() {

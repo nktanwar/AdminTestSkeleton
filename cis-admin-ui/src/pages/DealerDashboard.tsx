@@ -3,6 +3,7 @@ import {
   DealerAPI,
   type DealerDashboardSummary,
 } from "../lib/api"
+import { toUserFacingErrorMessage } from "../lib/errors"
 
 const CARDS: Array<{
   key: keyof DealerDashboardSummary
@@ -87,7 +88,7 @@ export default function DealerDashboard() {
       {summaryQuery.error && (
         <div className="rounded-2xl border border-red-500/30 bg-red-500/10 px-5 py-4 text-sm text-red-200">
           {summaryQuery.error instanceof Error
-            ? summaryQuery.error.message
+            ? toUserFacingErrorMessage(summaryQuery.error)
             : "Failed to load dealer dashboard."}
         </div>
       )}

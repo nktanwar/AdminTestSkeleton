@@ -1,3 +1,9 @@
+import {
+  API_CONFIG,
+  joinBaseAndPath,
+  requireConfiguredBaseUrl,
+} from "./apiConfig"
+
 export interface ProductFaq {
   question: string
   answer: string
@@ -146,21 +152,14 @@ export interface CisProductOptionSummaryDto {
   [key: string]: unknown
 }
 
-const PRODUCT_API = process.env.NEXT_PUBLIC_PRODUCT_API
-
 function resolveProductUrl(endpoint: string): string {
-  if (!PRODUCT_API) {
-    throw new Error("NEXT_PUBLIC_PRODUCT_API is not configured.")
-  }
-
-  const normalizedBase = PRODUCT_API.endsWith("/")
-    ? PRODUCT_API.slice(0, -1)
-    : PRODUCT_API
-  const normalizedEndpoint = endpoint.startsWith("/")
-    ? endpoint
-    : `/${endpoint}`
-
-  return `${normalizedBase}${normalizedEndpoint}`
+  return joinBaseAndPath(
+    requireConfiguredBaseUrl(
+      API_CONFIG.productBaseUrl,
+      "VITE_PRODUCT_API_BASE_URL"
+    ),
+    endpoint
+  )
 }
 
 export async function productGet<T>(

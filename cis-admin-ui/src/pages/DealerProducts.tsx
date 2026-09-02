@@ -30,6 +30,7 @@ import {
   type DealerProductSummary,
   type DealerProduct,
 } from "../lib/productApi"
+import { toUserFacingErrorMessage } from "../lib/errors"
 
 const SELECTED_CHANNEL_STORAGE_KEY = "selectedChannelId"
 
@@ -489,7 +490,7 @@ function ConfigurationPanel({
       {Boolean(error) && (
         <div className="mt-5 rounded-lg border border-red-500/30 bg-red-500/10 p-3 text-sm text-red-200">
           {error instanceof Error
-            ? error.message
+            ? toUserFacingErrorMessage(error)
             : "Failed to load configuration pricing."}
         </div>
       )}
@@ -1366,7 +1367,7 @@ export default function DealerProducts() {
     return (
       <div className="rounded-lg border border-red-500/30 bg-red-500/10 p-6 text-sm text-red-200">
         {channelsQuery.error instanceof Error
-          ? channelsQuery.error.message
+          ? toUserFacingErrorMessage(channelsQuery.error)
           : "Failed to load dealer channels."}
       </div>
     )

@@ -1,5 +1,6 @@
 import { useQuery } from "@tanstack/react-query"
 import { DealerAPI } from "../lib/api"
+import { toUserFacingErrorMessage } from "../lib/errors"
 
 function formatStatusLabel(value: boolean, enabled: string, disabled: string) {
   return value ? enabled : disabled
@@ -23,7 +24,7 @@ export default function DealerChannels() {
     return (
       <div className="rounded-2xl border border-red-500/30 bg-red-500/10 p-6 text-sm text-red-200">
         {channelsQuery.error instanceof Error
-          ? channelsQuery.error.message
+          ? toUserFacingErrorMessage(channelsQuery.error)
           : "Failed to load channels."}
       </div>
     )
@@ -58,7 +59,7 @@ export default function DealerChannels() {
               </span>
             </div>
 
-            <div className="mt-5 grid gap-3 sm:grid-cols-2">
+            <div className="mt-5 grid gap-3 sm:grid-cols-3">
               <div className="rounded-2xl border border-[var(--border)] bg-[var(--bg-panel)] p-4">
                 <div className="text-xs uppercase tracking-[0.18em] text-[var(--text-muted)]">
                   Wallet
@@ -80,6 +81,20 @@ export default function DealerChannels() {
                     channel.knowledgeCenterAccess,
                     "Accessible",
                     "Knowledge Center Disabled"
+                  )}
+                </div>
+              </div>
+              <div className="rounded-2xl border border-[var(--border)] bg-[var(--bg-panel)] p-4">
+                <div className="text-xs uppercase tracking-[0.18em] text-[var(--text-muted)]">
+                  Pricing
+                </div>
+                <div className="mt-2 text-sm font-medium">
+                  {formatStatusLabel(
+                    channel.pricingEnabled ??
+                      channel.pricingEnable ??
+                      false,
+                    "Enabled",
+                    "Disabled"
                   )}
                 </div>
               </div>

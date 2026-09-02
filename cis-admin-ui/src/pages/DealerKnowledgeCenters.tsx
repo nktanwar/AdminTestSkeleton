@@ -1,5 +1,6 @@
 import { useQuery } from "@tanstack/react-query"
 import { DealerAPI } from "../lib/api"
+import { toUserFacingErrorMessage } from "../lib/errors"
 
 function formatDate(value: string): string {
   const parsed = Date.parse(value)
@@ -25,7 +26,7 @@ export default function DealerKnowledgeCenters() {
     return (
       <div className="rounded-2xl border border-red-500/30 bg-red-500/10 p-6 text-sm text-red-200">
         {knowledgeCentersQuery.error instanceof Error
-          ? knowledgeCentersQuery.error.message
+          ? toUserFacingErrorMessage(knowledgeCentersQuery.error)
           : "Failed to load knowledge centers."}
       </div>
     )

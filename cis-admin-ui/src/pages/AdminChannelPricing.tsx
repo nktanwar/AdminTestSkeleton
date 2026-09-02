@@ -14,6 +14,7 @@ import {
   type ProductConfigurationOption,
   type ProductConfigurationQuestion,
 } from "../lib/productApi"
+import { toUserFacingErrorMessage } from "../lib/errors"
 
 type BaseDraft = {
   dealerPrice: string
@@ -516,7 +517,7 @@ export default function AdminChannelPricing() {
     return (
       <div className="rounded-2xl border border-red-500/30 bg-red-500/10 p-6 text-red-200">
         {channelQuery.error instanceof Error
-          ? channelQuery.error.message
+          ? toUserFacingErrorMessage(channelQuery.error)
           : "Failed to load channel."}
       </div>
     )
@@ -526,9 +527,9 @@ export default function AdminChannelPricing() {
     return (
       <div className="rounded-2xl border border-red-500/30 bg-red-500/10 p-6 text-red-200">
         {productsQuery.error instanceof Error
-          ? productsQuery.error.message
+          ? toUserFacingErrorMessage(productsQuery.error)
           : productPricingQuery.error instanceof Error
-            ? productPricingQuery.error.message
+            ? toUserFacingErrorMessage(productPricingQuery.error)
             : "Failed to load products or pricing."}
       </div>
     )
@@ -794,9 +795,9 @@ export default function AdminChannelPricing() {
                     ) : productConfigQuery.error || optionPricingQuery.error ? (
                       <div className="mt-4 rounded-xl border border-red-500/30 bg-red-500/10 p-4 text-sm text-red-200">
                         {productConfigQuery.error instanceof Error
-                          ? productConfigQuery.error.message
+                          ? toUserFacingErrorMessage(productConfigQuery.error)
                           : optionPricingQuery.error instanceof Error
-                            ? optionPricingQuery.error.message
+                            ? toUserFacingErrorMessage(optionPricingQuery.error)
                             : "Failed to load option pricing."}
                       </div>
                     ) : (
