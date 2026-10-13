@@ -1,6 +1,7 @@
 import { useQuery } from "@tanstack/react-query"
 import { AdminAPI, type AdminDashboardSummary } from "../lib/api"
 import { toUserFacingErrorMessage } from "../lib/errors"
+import AdminDealerAnalytics from "../components/AdminDealerAnalytics"
 
 const DASHBOARD_CARDS: Array<{
   key: keyof AdminDashboardSummary
@@ -175,6 +176,8 @@ export default function AdminDashboard() {
           </section>
         </>
       )}
+
+      <AdminDealerAnalytics />
     </div>
   )
 }

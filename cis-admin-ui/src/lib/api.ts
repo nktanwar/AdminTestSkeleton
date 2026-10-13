@@ -2,6 +2,12 @@
 
 import type { Channel } from "../types/channel"
 import type { DealerProduct } from "./productApi"
+import type {
+  AdminDealerAnalyticsParams,
+  AdminDealerAnalyticsResponse,
+  AdminDealerOrdersDetailResponse,
+  AdminDealerOrdersPageResponse,
+} from "../types/adminDealerAnalytics"
 import { API_CONFIG, joinBaseAndPath } from "./apiConfig"
 import { clearAuthState, getToken } from "./auth"
 import {
@@ -654,6 +660,54 @@ export const DashboardAPI = {
 export const AdminAPI = {
   getDashboardSummary: () =>
     api<AdminDashboardSummary>("/api/admin/dashboard/summary"),
+
+  getDealerOrderAnalytics: (params: AdminDealerAnalyticsParams = {}) => {
+    const query = new URLSearchParams()
+    for (const [key, value] of Object.entries(params)) {
+      if (value !== undefined && value !== "") query.set(key, String(value))
+    }
+
+    const suffix = query.toString() ? `?${query.toString()}` : ""
+    return api<AdminDealerAnalyticsResponse>(
+      `/api/admin/analytics/dealer-orders${suffix}`
+    )
+  },
+
+  getDealerOrders: (
+    dealerId: string,
+    params: Omit<AdminDealerAnalyticsParams, "dealerId"> = {}
+  ) => {
+    const query = new URLSearchParams()
+    for (const [key, value] of Object.entries(params)) {
+      if (value !== undefined && value !== "") query.set(key, String(value))
+    }
+
+    const suffix = query.toString() ? `?${query.toString()}` : ""
+    return api<AdminDealerOrdersDetailResponse | AdminDealerOrdersPageResponse>(
+      `/api/admin/analytics/dealer-orders/${encodeURIComponent(dealerId)}/orders${suffix}`
+    ).then((response) => {
+      if ("orders" in response && Array.isArray(response.orders)) {
+        return response
+      }
+
+      if (!("content" in response)) {
+        return {
+          orders: [],
+          pagination: { page: 0, size: 20, totalElements: 0, totalPages: 0 },
+        }
+      }
+
+      return {
+        orders: response.content ?? [],
+        pagination: {
+          page: response.number ?? 0,
+          size: response.size ?? 20,
+          totalElements: response.totalElements ?? response.content?.length ?? 0,
+          totalPages: response.totalPages ?? (response.content?.length ? 1 : 0),
+        },
+      }
+    })
+  },
 }
 
 export const DealerAPI = {
